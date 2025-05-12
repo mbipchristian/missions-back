@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.*;
@@ -38,9 +39,17 @@ public class User implements UserDetails {
     @Column
     private Date updated_at;
 
+    @ManyToOne(cascade = CascadeType.REMOVE)
+    @JoinColumn(name = "role_id", referencedColumnName = "id", nullable = false)
+    private Role role;
+
+    @ManyToOne
+    @JoinColumn(name = "grade_id", referencedColumnName = "id", nullable = false)
+    private Grade grade;
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.getName().toString());
+        return List.of(authority);
     }
 
     public String getPassword() {
@@ -117,5 +126,24 @@ public class User implements UserDetails {
 
     public void setUpdatedAt(Date updated_at) {
         this.updated_at = updated_at;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+    
+    public User setRole(Role role) {
+        this.role = role;
+    
+        return this;
+    }
+
+    public Grade getGrade() {
+        return grade;
+    }
+    
+    public User setGrade(Grade grade) {
+        this.grade = grade;
+        return this;
     }
 }
