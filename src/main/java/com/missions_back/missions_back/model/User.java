@@ -1,10 +1,8 @@
 package com.missions_back.missions_back.model;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
-import java.util.UUID;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
@@ -12,14 +10,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.*;
 
-
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
+//-------------------------------------------ATTRIBUTS DE MA TABLE--------------------------------------------------------------------
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(updatable = false, nullable = false)
-    private UUID id;
+    private Long id;
 
     @Column(nullable = false, unique = true)
     private String username;
@@ -32,51 +30,38 @@ public class User implements UserDetails {
 
     @CreationTimestamp
     @Column(updatable = false)
-    private Date created_at;
+    private LocalDateTime created_at;
 
     @UpdateTimestamp
     @Column
-    private Date updated_at;
+    private LocalDateTime updated_at;
 
+    @Column
+    private LocalDateTime deleted_at;
+
+    @Column
+    private boolean actif = true;
+
+//--------------------------------------------METHODES DE LA CLASSE USERDETAILS------------------------------------------------
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
-    }
-
-    public String getPassword() {
-        return password;
     }
 
     @Override
     public String getUsername() {
         return email;
     }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
+//----------------------------------------------GETTERS ET SETTERS---------------------------------------------------
+    public String getPassword() {
+        return password;
     }
 
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
-    }
-
-    public UUID getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -103,19 +88,49 @@ public class User implements UserDetails {
         return this;
     }
 
-    public Date getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return created_at;
     }
 
-    public void setCreatedAt(Date created_at) {
+    public void setCreatedAt(LocalDateTime created_at) {
         this.created_at = created_at;
     }
 
-    public Date getUpdatedAt() {
+    public LocalDateTime getUpdatedAt() {
         return updated_at;
     }
 
-    public void setUpdatedAt(Date updated_at) {
+    public void setUpdatedAt(LocalDateTime updated_at) {
         this.updated_at = updated_at;
     }
+    public boolean getActif() {
+        return actif;
+    }
+
+    public void setActif (boolean actif) {
+        this.actif = actif;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deleted_at;
+    }
+
+    public void setDeletedAt(LocalDateTime deleted_at) {
+        this.deleted_at = deleted_at;
+    }
+//------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
+
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
+
+    @ManyToOne
+    @JoinColumn(name = "Grade_id")
+    private Grade grade;
+
+    @ManyToMany()
+    @JoinTable(name = "user_mandat",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "mandat_id"))
+    private List<Mandat> mandats;
 }

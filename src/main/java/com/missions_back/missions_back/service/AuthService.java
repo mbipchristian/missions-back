@@ -1,15 +1,20 @@
 package com.missions_back.missions_back.service;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.missions_back.missions_back.dto.LoginUserDto;
 import com.missions_back.missions_back.dto.RegisterUserDto;
 import com.missions_back.missions_back.model.User;
 import com.missions_back.missions_back.repository.UserRepo;
+
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class AuthService {
@@ -38,5 +43,16 @@ public class AuthService {
         );
         return userRepo.findByEmail(input.email())
         .orElseThrow();
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        User deletedUser = userRepo.findById(id)
+        .orElseThrow(() -> new EntityNotFoundException("Entité non trouvée avec l'ID : " + id));
+
+        deletedUser.setActif(false);
+        deletedUser.setDeletedAt(LocalDateTime.now());
+
+        userRepo.save(deletedUser);
     }
 }
