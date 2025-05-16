@@ -1,10 +1,11 @@
 package com.missions_back.missions_back.model;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Where;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,6 +17,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@Where(clause = "actif = true")
 @Table(name = "grades")
 public class Grade {
     @Id
@@ -24,13 +26,16 @@ public class Grade {
     private Long id;
 
     @Column(nullable = false, unique = true)
+    private String code;
+
+    @Column(nullable = false, unique = true)
     private String name;
 
     @Column(nullable = false)
-    private int fraisInterne;
+    private Long fraisInterne;
 
     @Column(nullable = false)
-    private int fraisExterne;
+    private Long fraisExterne;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -45,9 +50,4 @@ public class Grade {
 
     @Column
     private boolean actif = true;
-
-    //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
-
-    // @OneToMany(mappedBy = "grade")
-    // private List<User> users;
 }

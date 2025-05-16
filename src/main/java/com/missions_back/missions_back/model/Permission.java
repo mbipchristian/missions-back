@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Where;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,21 +18,28 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "menus")
-public class Menu {
+@Where(clause = "actif = true")
+@Table(name = "permissions")
+public class Permission {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(updatable = false, nullable = false)
     private Long id;
 
     @Column(nullable = false, unique = true)
+    private String code;
+
+    @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(nullable = false)
-    private String icone;
+    // @Column(nullable = false)
+    // private String icone;
+
+    // @Column(nullable = false)
+    // private String url;
 
     @Column(nullable = false)
-    private String url;
+    private String description;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -48,6 +57,6 @@ public class Menu {
 
     //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
 
-    @ManyToMany(mappedBy = "menus")
+    @ManyToMany(mappedBy = "permissions")
     private List<Role> roles;
 }

@@ -5,12 +5,17 @@ import java.util.Collection;
 import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Where;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.*;
-
+import lombok.Getter;
+import lombok.Setter;
+@Getter
+@Setter
 @Entity
+@Where(clause = "actif = true")
 @Table(name = "users")
 public class User implements UserDetails {
 //-------------------------------------------ATTRIBUTS DE MA TABLE--------------------------------------------------------------------
@@ -18,6 +23,9 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(updatable = false, nullable = false)
     private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String matricule;
 
     @Column(nullable = false, unique = true)
     private String username;
@@ -117,6 +125,14 @@ public class User implements UserDetails {
 
     public void setDeletedAt(LocalDateTime deleted_at) {
         this.deleted_at = deleted_at;
+    }
+
+    public String getMatricule() {
+        return matricule;
+    }
+    public User setMatricule(String matricule) {
+        this.matricule = matricule;
+        return this;
     }
 //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
 

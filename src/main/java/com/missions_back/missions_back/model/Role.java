@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Where;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -17,12 +18,16 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
+@Where(clause = "actif = true")
 @Table(name = "roles")
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(updatable = false, nullable = false)
     private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String code;
 
     @Column(nullable = false, unique = true)
     private String name;
@@ -44,8 +49,8 @@ public class Role {
     //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
 
     @ManyToMany
-    @JoinTable(name = "role_menus",
+    @JoinTable(name = "role_permission",
             joinColumns = @JoinColumn(name = "role_id"),
-            inverseJoinColumns = @JoinColumn(name = "menu_id"))
-    private List<Menu> menus;
+            inverseJoinColumns = @JoinColumn(name = "permission_id"))
+    private List<Permission> permissions;
 }

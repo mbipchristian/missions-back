@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Where;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@Where(clause = "actif = true")
 @Table(name = "villes")
 public class Ville {
     @Id
@@ -24,8 +26,11 @@ public class Ville {
     @Column(updatable = false, nullable = false)
     private Long id;
 
-    @Column(nullable = false)
-    private List<String> name;
+    @Column(nullable = false, unique = true)
+    private String code;
+
+    @Column(nullable = false, unique = true)
+    private String name;
 
     @CreationTimestamp
     @Column(updatable = false)

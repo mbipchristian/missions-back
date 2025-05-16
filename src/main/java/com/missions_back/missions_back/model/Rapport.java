@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Where;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,6 +17,7 @@ import lombok.Setter;
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
+@Where(clause = "actif = true")
 @Table(name = "rapports")
 public class Rapport {
     @Id
@@ -24,7 +26,7 @@ public class Rapport {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String reference;
+    private Long reference;
 
     @Column(nullable = false)
     private String pieceJointe;
