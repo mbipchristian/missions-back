@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 @Getter
 @Setter
 @Entity
@@ -35,6 +36,9 @@ public class User implements UserDetails {
 
     @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false)
+    private Long QuotaAnnuel;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -100,23 +104,26 @@ public class User implements UserDetails {
         return created_at;
     }
 
-    public void setCreatedAt(LocalDateTime created_at) {
+    public User setCreatedAt(LocalDateTime created_at) {
         this.created_at = created_at;
+        return this;
     }
 
     public LocalDateTime getUpdatedAt() {
         return updated_at;
     }
 
-    public void setUpdatedAt(LocalDateTime updated_at) {
+    public User setUpdatedAt(LocalDateTime updated_at) {
         this.updated_at = updated_at;
+        return this;
     }
     public boolean getActif() {
         return actif;
     }
 
-    public void setActif (boolean actif) {
+    public User setActif (boolean actif) {
         this.actif = actif;
+        return this;
     }
 
     public LocalDateTime getDeletedAt() {
@@ -132,6 +139,13 @@ public class User implements UserDetails {
     }
     public User setMatricule(String matricule) {
         this.matricule = matricule;
+        return this;
+    }
+    public Long getQuotaAnnuel() {
+        return QuotaAnnuel;
+    }
+    public User setQuotaAnnuel(Long quotaAnnuel) {
+        QuotaAnnuel = quotaAnnuel;
         return this;
     }
 //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------

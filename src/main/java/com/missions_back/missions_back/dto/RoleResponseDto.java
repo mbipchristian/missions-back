@@ -10,7 +10,6 @@ public record RoleResponseDto(
    LocalDateTime createdAt, 
                           
    LocalDateTime updatedAt, 
-   boolean actif,
    List<PermissionResponseDto> permissions
 ) {
     

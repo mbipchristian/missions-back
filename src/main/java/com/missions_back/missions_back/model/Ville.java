@@ -32,6 +32,9 @@ public class Ville {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Column(nullable = false)
+    private boolean interieur;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime created_at;

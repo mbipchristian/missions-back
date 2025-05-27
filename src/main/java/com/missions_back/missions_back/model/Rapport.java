@@ -26,7 +26,7 @@ public class Rapport {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private Long reference;
+    private String reference;
 
     @Column(nullable = false)
     private String pieceJointe;

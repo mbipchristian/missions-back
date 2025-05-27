@@ -10,4 +10,5 @@ import com.missions_back.missions_back.model.Grade;
 public interface GradeRepo extends JpaRepository<Grade, Long> {
     Optional<Grade> findByName(String name);
     List<Grade> findByActifTrue();
+    Optional<Grade> findByIdAndActifTrue(Long id);
 }

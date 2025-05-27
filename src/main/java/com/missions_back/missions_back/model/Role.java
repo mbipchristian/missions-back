@@ -1,6 +1,7 @@
 package com.missions_back.missions_back.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -52,5 +53,7 @@ public class Role {
     @JoinTable(name = "role_permission",
             joinColumns = @JoinColumn(name = "role_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id"))
-    private List<Permission> permissions;
+    private List<Permission> permissions = new ArrayList<>();
+
+    
 }

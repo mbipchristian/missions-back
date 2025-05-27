@@ -2,10 +2,13 @@ package com.missions_back.missions_back.dto;
 
 import java.time.LocalDateTime;
 
-public record PermissionResponseDto(
+public record VilleResponseDto(
     Long id,
     String name,
     String code,
-    LocalDateTime created_at,
-    LocalDateTime updated_at
-) {}
+    boolean interieur,
+    LocalDateTime createdAt,
+    LocalDateTime updatedAt
+) {
+    
+}

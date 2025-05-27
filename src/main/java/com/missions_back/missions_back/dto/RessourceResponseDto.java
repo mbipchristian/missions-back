@@ -2,10 +2,13 @@ package com.missions_back.missions_back.dto;
 
 import java.time.LocalDateTime;
 
-public record PermissionResponseDto(
+public record RessourceResponseDto(
     Long id,
     String name,
     String code,
-    LocalDateTime created_at,
-    LocalDateTime updated_at
-) {}
+    Long quantite,
+    LocalDateTime createdAt,
+    LocalDateTime updatedAt
+) {
+    
+}

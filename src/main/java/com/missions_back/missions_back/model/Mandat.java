@@ -1,6 +1,7 @@
 package com.missions_back.missions_back.model;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -36,7 +37,13 @@ public class Mandat {
     private boolean missionDeControle;
 
     @Column(nullable = false)
-    private boolean interieur;
+    private Date dateDebut;
+
+    @Column(nullable = false)
+    private Date dateFin;
+
+    @Column(nullable = false)
+    private int duree;
 
     @Column(nullable = false)
     private String pieceJointe;

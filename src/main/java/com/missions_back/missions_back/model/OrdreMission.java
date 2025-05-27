@@ -1,6 +1,7 @@
 package com.missions_back.missions_back.model;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -39,6 +40,12 @@ public class OrdreMission {
 
     @Column(nullable = false)
     private Long tauxAvance;
+
+    @Column(nullable = false)
+    private Date dateDebut;
+
+    @Column(nullable = false)
+    private Date dateFin;
 
     @Column(nullable = false)
     private Long duree;

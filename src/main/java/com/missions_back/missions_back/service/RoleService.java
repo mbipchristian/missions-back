@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.missions_back.missions_back.dto.PermissionResponseDto;
 import com.missions_back.missions_back.dto.RoleDto;
+import com.missions_back.missions_back.dto.RolePermissionUpdateDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
 import com.missions_back.missions_back.model.Permission;
 import com.missions_back.missions_back.model.Role;
@@ -41,6 +42,8 @@ public class RoleService {
         Role role = new Role();
         role.setName(roleDto.name());
         role.setCode(roleDto.code());
+        role.setCreated_at(LocalDateTime.now());
+        role.setUpdated_at(LocalDateTime.now());
         role.setActif(true);
 
         // Ajouter les permissions au rôle
@@ -56,13 +59,13 @@ public class RoleService {
         }
 
         Role createdRole = roleRepo.save(role);
-        return convertToResponseDto(createdRole);
+        return convertToRoleResponseDto(createdRole);
     }
     //Récupérer tous les rôles actifs
     public List<RoleResponseDto> getAllRoles() {
         List<Role> roles = roleRepo.findByActifTrue();
         return roles.stream()
-            .map(this::convertToResponseDto)
+            .map(this::convertToRoleResponseDto)
             .collect(Collectors.toList());
     }
     
@@ -71,7 +74,7 @@ public class RoleService {
     public RoleResponseDto getRoleById(Long id) {
         Role role = roleRepo.findByIdAndActifTrue(id)
             .orElseThrow(() -> new EntityNotFoundException("Rôle non trouvé avec l'ID : " + id));
-        return convertToResponseDto(role);
+        return convertToRoleResponseDto(role);
     }
     
     
@@ -102,7 +105,7 @@ public class RoleService {
         }
         
         Role updatedRole = roleRepo.save(role);
-        return convertToResponseDto(updatedRole);
+        return convertToRoleResponseDto(updatedRole);
     }
     
     // Supprime logiquement un role
@@ -115,10 +118,59 @@ public class RoleService {
         roleRepo.save(role);
     }
 
+    // Méthode pour mettre à jour les permissions d'un rôle
+    @Transactional
+    public RoleResponseDto updateRolePermissions(RolePermissionUpdateDto updateDto) {
+        Role role = roleRepo.findById(updateDto.roleId())
+            .orElseThrow(() -> new EntityNotFoundException("Rôle non trouvé avec l'ID: " + updateDto.roleId()));
+        
+        // Récupérer toutes les permissions demandées
+        List<Permission> permissions = updateDto.permissionIds().stream()
+            .map(id -> permissionRepo.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Permission non trouvée avec l'ID: " + id)))
+            .collect(Collectors.toList());
+        
+        // Mettre à jour les permissions du rôle
+        role.setPermissions(permissions);
+        role.setUpdated_at(LocalDateTime.now());
+        
+        Role updatedRole = roleRepo.save(role);
+        return convertToRoleResponseDto(updatedRole);
+    }
+
+    // Méthode pour ajouter une permission à un rôle
+    @Transactional
+    public RoleResponseDto addPermissionToRole(Long roleId, Long permissionId) {
+        Role role = roleRepo.findById(roleId)
+            .orElseThrow(() -> new EntityNotFoundException("Rôle non trouvé avec l'ID: " + roleId));
+            
+        Permission permission = permissionRepo.findById(permissionId)
+            .orElseThrow(() -> new EntityNotFoundException("Permission non trouvée avec l'ID: " + permissionId));
+            
+        role.getPermissions().add(permission);
+        role.setUpdated_at(LocalDateTime.now());
+        
+        Role updatedRole = roleRepo.save(role);
+        return convertToRoleResponseDto(updatedRole);
+    }
+
+    // Méthode pour supprimer une permission d'un rôle
+    @Transactional
+    public RoleResponseDto removePermissionFromRole(Long roleId, Long permissionId) {
+        Role role = roleRepo.findById(roleId)
+            .orElseThrow(() -> new EntityNotFoundException("Rôle non trouvé avec l'ID: " + roleId));
+            
+        role.getPermissions().removeIf(p -> p.getId().equals(permissionId));
+        role.setUpdated_at(LocalDateTime.now());
+        
+        Role updatedRole = roleRepo.save(role);
+        return convertToRoleResponseDto(updatedRole);
+    }
+
     /**
      * Convertit une entité Role en DTO de réponse
      */
-    private RoleResponseDto convertToResponseDto(Role role) {
+    private RoleResponseDto convertToRoleResponseDto(Role role) {
         List<PermissionResponseDto> permissionDtos = role.getPermissions() != null 
             ? role.getPermissions().stream()
                 .map(permission -> new PermissionResponseDto(
@@ -126,8 +178,7 @@ public class RoleService {
                     permission.getName(),
                     permission.getCode(),
                     permission.getCreated_at(),
-                    permission.getUpdated_at(),
-                    permission.isActif()
+                    permission.getUpdated_at()
                 ))
                 .collect(Collectors.toList())
             : List.of();
@@ -138,7 +189,6 @@ public class RoleService {
             role.getName(),
             role.getCreated_at(),
             role.getUpdated_at(),
-            role.isActif(),
             permissionDtos
         );
     }

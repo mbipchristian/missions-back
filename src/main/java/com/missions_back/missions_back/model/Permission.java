@@ -32,14 +32,14 @@ public class Permission {
     @Column(nullable = false, unique = true)
     private String name;
 
-    // @Column(nullable = false)
-    // private String icone;
-
-    // @Column(nullable = false)
-    // private String url;
+    @Column(nullable = false)
+    private String icone;
 
     @Column(nullable = false)
-    private String description;
+    private String url;
+
+    // @Column(nullable = false)
+    // private String description;
 
     @CreationTimestamp
     @Column(updatable = false)

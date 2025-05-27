@@ -51,9 +51,9 @@ public class Ressource {
 
     //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    // @ManyToOne
+    // @JoinColumn(name = "user_id")
+    // private User user;
 
     @ManyToMany(mappedBy = "ressources")
     private List<Mandat> mandats;
