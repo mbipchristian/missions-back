@@ -59,9 +59,6 @@ public class OrdreMission {
     @Column(nullable = false)
     private Long decompteRelicat;
 
-    @Column(nullable = false)
-    private String pieceJointe;
-
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime created_at;

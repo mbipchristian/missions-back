@@ -16,7 +16,6 @@ public record OrdreMissionResponseDto(
     Long decompteTotal,
     Long decompteAvance,
     Long decompteRelicat,
-    String pieceJointe,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {

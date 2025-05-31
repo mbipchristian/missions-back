@@ -1,16 +1,15 @@
 package com.missions_back.missions_back.dto;
 
 import java.time.LocalDateTime;
-import java.util.List;
+
+import com.missions_back.missions_back.model.RoleEnum;
 
 public record RoleResponseDto(
    Long id, 
-   String code, 
-   String name, 
-   LocalDateTime createdAt, 
-                          
-   LocalDateTime updatedAt, 
-   List<PermissionResponseDto> permissions
+   RoleEnum name, 
+   String description, 
+   LocalDateTime createdAt,              
+   LocalDateTime updatedAt
 ) {
     
 }

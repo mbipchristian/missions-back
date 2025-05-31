@@ -2,7 +2,6 @@ package com.missions_back.missions_back.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,17 +11,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.missions_back.missions_back.dto.GradeResponseDto;
+import com.missions_back.missions_back.dto.FonctionResponseDto;
 import com.missions_back.missions_back.dto.LoginUserDto;
-import com.missions_back.missions_back.dto.PermissionResponseDto;
 import com.missions_back.missions_back.dto.RegisterUserDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
 import com.missions_back.missions_back.dto.UserResponseDto;
 import com.missions_back.missions_back.dto.UserRoleUpdateDto;
-import com.missions_back.missions_back.model.Grade;
+import com.missions_back.missions_back.model.Fonction;
 import com.missions_back.missions_back.model.Role;
 import com.missions_back.missions_back.model.User;
-import com.missions_back.missions_back.repository.GradeRepo;
+import com.missions_back.missions_back.repository.FonctionRepository;
 import com.missions_back.missions_back.repository.RoleRepo;
 import com.missions_back.missions_back.repository.UserRepo;
 
@@ -34,15 +32,19 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
     private RoleRepo roleRepo;
-    private GradeRepo gradeRepo;
+    private FonctionRepository fonctionRepository;
+    private RoleService roleService;
+    private FonctionService fonctionService;
     
 
-    public UserService(UserRepo userRepo, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, RoleRepo roleRepo, GradeRepo gradeRepo) {
+    public UserService(UserRepo userRepo, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, RoleRepo roleRepo, RoleService roleService, FonctionRepository fonctionRepository, FonctionService fonctionService) {
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.roleRepo = roleRepo;
-        this.gradeRepo = gradeRepo;
+        this.roleService = roleService;
+        this.fonctionRepository = fonctionRepository;
+        this.fonctionService = fonctionService;
     }
 
     public User signup(RegisterUserDto input) {
@@ -51,8 +53,8 @@ public class UserService {
         Role role = roleRepo.findById(input.roleId())
                 .orElseThrow(() -> new EntityNotFoundException("Role not found with ID : " + input.roleId()));
 
-        Grade grade = gradeRepo.findById(input.gradeId())
-                .orElseThrow(() -> new EntityNotFoundException("Grade not found with ID : " + input.gradeId()));
+        Fonction fonction = fonctionRepository.findById(input.fonctionId())
+                .orElseThrow(() -> new EntityNotFoundException("Grade not found with ID : " + input.fonctionId()));
 
         // Créer et configurer l'utilisateur
         User user = new User()
@@ -65,9 +67,9 @@ public class UserService {
                 .setUpdatedAt(LocalDateTime.now())
                 .setActif(true);
 
-        // Associer le rôle et le grade à l'utilisateur
+        // Associer le rôle et la fonction à l'utilisateur
         user.setRole(role);
-        user.setGrade(grade);
+        user.setFonction(fonction);
         return userRepo.save(user);
     }
 
@@ -137,10 +139,10 @@ public class UserService {
     // Méthode pour convertir un utilisateur en UserResponseDto
     private UserResponseDto convertToUserResponseDto(User user) {
         RoleResponseDto roleDto = null;
-        GradeResponseDto gradeDto = null;
+        FonctionResponseDto fonctionDto = null;
         if (user.getRole() != null && user.getRole() != null) {
             roleDto = convertToRoleResponseDto(user.getRole());
-            gradeDto = convertToGradeResponseDto(user.getGrade());
+            fonctionDto = convertToFonctionResponseDto(user.getFonction());
         }
         return new UserResponseDto(
             user.getId(),
@@ -148,8 +150,8 @@ public class UserService {
             user.getEmail(),
             user.getMatricule(),
             user.getQuotaAnnuel(),
-            roleDto,  // Un seul rôle au lieu d'une liste
-            gradeDto,
+            roleDto,  
+            fonctionDto,
             user.getCreatedAt(),
             user.getUpdatedAt()
         );
@@ -157,38 +159,36 @@ public class UserService {
     }
 
     private RoleResponseDto convertToRoleResponseDto(Role role) {
-        List<PermissionResponseDto> permissionDtos = role.getPermissions() != null 
-            ? role.getPermissions().stream()
-                .map(permission -> new PermissionResponseDto(
-                    permission.getId(),
-                    permission.getName(),
-                    permission.getCode(),
-                    permission.getCreated_at(),
-                    permission.getUpdated_at()
-                ))
-                .collect(Collectors.toList())
-            : List.of();
+        
         
         return new RoleResponseDto(
             role.getId(),
-            role.getCode(),
             role.getName(),
+            role.getDescription(),
             role.getCreated_at(),
-            role.getUpdated_at(),
-            permissionDtos
+            role.getUpdated_at()
         );
     }
 
-    private GradeResponseDto convertToGradeResponseDto(Grade grade) {
-        return new GradeResponseDto(
-            grade.getId(),
-            grade.getName(),
-            grade.getCode(),
-            grade.getFraisExterne(),
-            grade.getFraisInterne(),
-            grade.getCreated_at(),
-            grade.getUpdated_at()
-        );
-    }
+    public static FonctionResponseDto convertToFonctionResponseDto(Fonction fonction) {
+        if (fonction == null) {
+            return null;
+        }
+        
+        FonctionResponseDto dto = new FonctionResponseDto();
+        dto.setId(fonction.getId());
+        dto.setNom(fonction.getNom());
+        dto.setCreated_at(fonction.getCreated_at());
+        dto.setUpdated_at(fonction.getUpdated_at());
+        
+        // Mapping des informations du rang associé
+        if (fonction.getRang() != null) {
+            dto.setRangId(fonction.getRang().getId());
+            dto.setRangNom(fonction.getRang().getNom());
+            dto.setRangCode(fonction.getRang().getCode());
+        }
+        
+        return dto;
+}
     
 }

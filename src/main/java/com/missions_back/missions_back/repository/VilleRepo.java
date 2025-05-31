@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.missions_back.missions_back.model.Permission;
 import com.missions_back.missions_back.model.Ville;
 
 public interface VilleRepo extends JpaRepository<Ville, Long> {

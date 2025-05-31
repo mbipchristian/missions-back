@@ -63,7 +63,6 @@ public class RapportService {
         
         Rapport rapport = new Rapport();
         rapport.setReference(rapportDto.reference());
-        rapport.setPieceJointe(rapportDto.pieceJointe());
         rapport.setMandat(mandat);
         rapport.setActif(true);
         
@@ -90,7 +89,6 @@ public class RapportService {
                 .orElseThrow(() -> new RuntimeException("Mandat non trouvé avec l'ID: " + rapportDto.mandatId()));
         
         existingRapport.setReference(rapportDto.reference());
-        existingRapport.setPieceJointe(rapportDto.pieceJointe());
         existingRapport.setMandat(mandat);
         
         Rapport updatedRapport = rapportRepo.save(existingRapport);
@@ -108,7 +106,6 @@ public class RapportService {
         return new RapportResponseDto(
                 rapport.getId(),
                 rapport.getReference(),
-                rapport.getPieceJointe(),
                 rapport.getCreated_at(),
                 rapport.getUpdated_at()
         );

@@ -18,7 +18,7 @@ import com.missions_back.missions_back.dto.RapportResponseDto;
 import com.missions_back.missions_back.service.RapportService;
 
 @RestController
-@RequestMapping("/rapports")
+@RequestMapping("/auth/rapports")
 public class RapportController {
 
     private final RapportService rapportService;

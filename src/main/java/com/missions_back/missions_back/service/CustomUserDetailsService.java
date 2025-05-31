@@ -10,7 +10,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import com.missions_back.missions_back.model.Permission;
 import com.missions_back.missions_back.model.Role;
 import com.missions_back.missions_back.model.User;
 import com.missions_back.missions_back.repository.UserRepo;
@@ -32,15 +31,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         // Puisqu'un user n'a qu'un seul rôle
         Role role = user.getRole();
         if (role != null) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getCode()));
-
-            // Ajouter les permissions comme autorités
-            if (role.getPermissions() != null) {
-                for (Permission permission : role.getPermissions()) {
-                    authorities.add(new SimpleGrantedAuthority(permission.getCode()));
-                }
-                
-            }
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
         
         }
         return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(), authorities);

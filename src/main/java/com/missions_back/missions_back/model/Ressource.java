@@ -27,13 +27,7 @@ public class Ressource {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String code;
-
-    @Column(nullable = false, unique = true)
     private String name;
-
-    @Column()
-    private Long quantite;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -57,4 +51,7 @@ public class Ressource {
 
     @ManyToMany(mappedBy = "ressources")
     private List<Mandat> mandats;
+
+    @ManyToMany(mappedBy = "ressources")
+    private List<Etape> etapes;
 }

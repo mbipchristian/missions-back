@@ -28,9 +28,6 @@ public class Rapport {
     @Column(nullable = false, unique = true)
     private String reference;
 
-    @Column(nullable = false)
-    private String pieceJointe;
-
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime created_at;

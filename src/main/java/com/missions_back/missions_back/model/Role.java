@@ -27,11 +27,12 @@ public class Role {
     @Column(updatable = false, nullable = false)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String code;
+    @Column(nullable = false)
+    private String description;
 
     @Column(nullable = false, unique = true)
-    private String name;
+    @Enumerated(EnumType.STRING)
+    private RoleEnum name;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -47,13 +48,18 @@ public class Role {
     @Column
     private boolean actif = true;
 
+    public Role setDescription(String description) {
+        this.description = description;
+        return this;
+    }
+    public Role setName(RoleEnum name){
+        this.name = name;
+        return this;
+    }
+
+
     //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
 
-    @ManyToMany
-    @JoinTable(name = "role_permission",
-            joinColumns = @JoinColumn(name = "role_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id"))
-    private List<Permission> permissions = new ArrayList<>();
 
     
 }

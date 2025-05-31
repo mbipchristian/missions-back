@@ -14,7 +14,6 @@ public record OrdreMissionDto(
     Long decompteTotal,
     Long decompteAvance,
     Long decompteRelicat,
-    String pieceJointe,
     Long mandatId
 ) {
     

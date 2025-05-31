@@ -128,7 +128,6 @@ public class OrdreMissionService {
         ordreMission.setDecompteTotal(ordreMissionDto.decompteTotal());
         ordreMission.setDecompteAvance(ordreMissionDto.decompteAvance());
         ordreMission.setDecompteRelicat(ordreMissionDto.decompteRelicat());
-        ordreMission.setPieceJointe(ordreMissionDto.pieceJointe());
         ordreMission.setUser(user);
         ordreMission.setMandat(mandat);
         ordreMission.setActif(true);
@@ -172,7 +171,6 @@ public class OrdreMissionService {
         existingOrdreMission.setDecompteTotal(ordreMissionDto.decompteTotal());
         existingOrdreMission.setDecompteAvance(ordreMissionDto.decompteAvance());
         existingOrdreMission.setDecompteRelicat(ordreMissionDto.decompteRelicat());
-        existingOrdreMission.setPieceJointe(ordreMissionDto.pieceJointe());
         existingOrdreMission.setMandat(mandat);
         
         OrdreMission updatedOrdreMission = ordreMissionRepo.save(existingOrdreMission);
@@ -235,7 +233,6 @@ public class OrdreMissionService {
                 ordreMission.getDecompteTotal(),
                 ordreMission.getDecompteAvance(),
                 ordreMission.getDecompteRelicat(),
-                ordreMission.getPieceJointe(),
                 ordreMission.getCreated_at(),
                 ordreMission.getUpdated_at()
         );

@@ -2,23 +2,21 @@ package com.missions_back.missions_back.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.missions_back.missions_back.dto.GradeResponseDto;
+import com.missions_back.missions_back.dto.FonctionResponseDto;
 import com.missions_back.missions_back.dto.MandatDto;
 import com.missions_back.missions_back.dto.MandatResponseDto;
-import com.missions_back.missions_back.dto.PermissionResponseDto;
 import com.missions_back.missions_back.dto.RapportResponseDto;
 import com.missions_back.missions_back.dto.RessourceResponseDto;
-import com.missions_back.missions_back.dto.RoleDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
 import com.missions_back.missions_back.dto.UserResponseDto;
 import com.missions_back.missions_back.dto.VilleResponseDto;
 import com.missions_back.missions_back.model.Mandat;
-import com.missions_back.missions_back.model.Permission;
 import com.missions_back.missions_back.model.Rapport;
 import com.missions_back.missions_back.model.Ressource;
 import com.missions_back.missions_back.model.User;
@@ -63,7 +61,6 @@ public class MandatService {
         mandat.setDateDebut(mandatDto.dateDebut());
         mandat.setDateFin(mandatDto.dateFin());
         mandat.setDuree(mandatDto.duree());
-        mandat.setPieceJointe(mandatDto.pieceJointe());
         mandat.setCreated_at(LocalDateTime.now());
         mandat.setUpdated_at(LocalDateTime.now());
         mandat.setActif(true);
@@ -136,7 +133,6 @@ public class MandatService {
         mandat.setReference(mandatDto.reference());
         mandat.setObjectif(mandatDto.objectif());
         mandat.setMissionDeControle(mandatDto.missionDeControle());
-        mandat.setPieceJointe(mandatDto.pieceJointe());
         mandat.setUpdated_at(LocalDateTime.now());
 
         // Mettre à jour les utilisateurs
@@ -171,11 +167,26 @@ public class MandatService {
     }
     // Supprimer un mandat
     @Transactional
-    public void deleteMandat(Long id) {
-        if (!mandatRepo.existsById(id)) {
+    public boolean softDeleteMandat(Long id) {
+        Optional<Mandat> mandatOptional = mandatRepo.findById(id);
+        
+        if (mandatOptional.isEmpty()) {
             throw new EntityNotFoundException("Mandat non trouvé avec l'ID: " + id);
         }
-        mandatRepo.deleteById(id);
+        
+        Mandat mandat = mandatOptional.get();
+        
+        // Vérifier si le mandat n'est pas déjà supprimé
+        if (!mandat.isActif()) {
+            return false; // Déjà supprimé
+        }
+        
+        // Soft delete : marquer comme inactif et définir la date de suppression
+        mandat.setActif(false);
+        mandat.setDeleted_at(LocalDateTime.now());
+        
+        mandatRepo.save(mandat);
+        return true;
     }
     // Récupérer les mandats par utilisateur
     public List<MandatResponseDto> getMandatsByUser(Long userId) {
@@ -227,13 +238,13 @@ public class MandatService {
             mandat.getDateDebut(),
             mandat.getDateFin(),
             mandat.getDuree(),
-            mandat.getPieceJointe(),
             mandat.getCreated_at(),
             mandat.getUpdated_at(),
             userDtos,
             villeDtos,
             ressourceDtos,
             rapportDto
+            
         );
     }
     // Méthodes de conversion auxiliaires
@@ -242,25 +253,20 @@ public class MandatService {
             new RoleResponseDto(
                 user.getRole().getId(),
                 user.getRole().getName(),
-                user.getRole().getCode(),
+                user.getRole().getDescription(),
                 user.getRole().getCreated_at(),
-                user.getRole().getUpdated_at(),
-                user.getRole().getPermissions() != null ?
-                    user.getRole().getPermissions().stream()
-                        .map(this::convertToPermissionResponseDto)
-                        .collect(Collectors.toList()) :
-                    List.of()
+                user.getRole().getUpdated_at()
             ) : null;
 
-        GradeResponseDto gradeDto = user.getGrade() != null ?
-            new GradeResponseDto(
-                user.getGrade().getId(),
-                user.getGrade().getName(),
-                user.getGrade().getCode(),
-                user.getGrade().getFraisExterne(),
-                user.getGrade().getFraisInterne(),
-                user.getGrade().getCreated_at(),
-                user.getGrade().getUpdated_at()
+        FonctionResponseDto fonctionDto = user.getFonction() != null ?
+            new FonctionResponseDto(
+                user.getFonction().getId(),
+                user.getFonction().getNom(),
+                user.getFonction().getCreated_at(),
+                user.getFonction().getUpdated_at(),
+                user.getFonction().getRang().getId(),
+                user.getFonction().getRang().getNom(),
+                user.getFonction().getRang().getCode()
             ) : null;
 
         return new UserResponseDto(
@@ -270,19 +276,9 @@ public class MandatService {
             user.getMatricule(),
             user.getQuotaAnnuel(),
             roleDto,
-            gradeDto,
+            fonctionDto,
             user.getCreated_at(),
             user.getUpdated_at()
-        );
-    }
-
-    private PermissionResponseDto convertToPermissionResponseDto(Permission permission) {
-        return new PermissionResponseDto(
-            permission.getId(),
-            permission.getName(),
-            permission.getCode(),
-            permission.getCreated_at(),
-            permission.getUpdated_at()
         );
     }
 
@@ -301,8 +297,6 @@ public class MandatService {
         return new RessourceResponseDto(
             ressource.getId(),
             ressource.getName(),
-            ressource.getCode(),
-            ressource.getQuantite(),
             ressource.getCreated_at(),
             ressource.getUpdated_at()
         );
@@ -311,7 +305,6 @@ public class MandatService {
         return new RapportResponseDto(
             rapport.getId(),
             rapport.getReference(),
-            rapport.getPieceJointe(),
             rapport.getCreated_at(),
             rapport.getUpdated_at()
         );

@@ -94,51 +94,8 @@ public class RessourceController {
         }
     }
     
-    @PatchMapping("/{id}/quantite")
-    public ResponseEntity<RessourceResponseDto> updateQuantite(
-            @PathVariable Long id,
-            @RequestBody Map<String, Long> request) {
-        Long nouvelleQuantite = request.get("quantite");
-        if (nouvelleQuantite == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        
-        return ressourceService.updateQuantite(id, nouvelleQuantite)
-                .map(ressource -> ResponseEntity.ok(ressource))
-                .orElse(ResponseEntity.notFound().build());
-    }
     
-    @PatchMapping("/{id}/ajouter")
-    public ResponseEntity<RessourceResponseDto> ajouterQuantite(
-            @PathVariable Long id,
-            @RequestBody Map<String, Long> request) {
-        Long quantiteAAjouter = request.get("quantite");
-        if (quantiteAAjouter == null || quantiteAAjouter <= 0) {
-            return ResponseEntity.badRequest().build();
-        }
-        
-        return ressourceService.ajouterQuantite(id, quantiteAAjouter)
-                .map(ressource -> ResponseEntity.ok(ressource))
-                .orElse(ResponseEntity.notFound().build());
-    }
     
-    @PatchMapping("/{id}/retirer")
-    public ResponseEntity<RessourceResponseDto> retirerQuantite(
-            @PathVariable Long id,
-            @RequestBody Map<String, Long> request) {
-        Long quantiteARetirer = request.get("quantite");
-        if (quantiteARetirer == null || quantiteARetirer <= 0) {
-            return ResponseEntity.badRequest().build();
-        }
-        
-        try {
-            return ressourceService.retirerQuantite(id, quantiteARetirer)
-                    .map(ressource -> ResponseEntity.ok(ressource))
-                    .orElse(ResponseEntity.notFound().build());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
     
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException e) {

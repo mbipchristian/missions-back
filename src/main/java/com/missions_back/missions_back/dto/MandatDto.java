@@ -10,7 +10,6 @@ public record MandatDto(
         Date dateDebut,
         Date dateFin,
         int duree,
-        String pieceJointe,
         Long rapportId,
         List<Long> userIds,
         List<Long> ressourceIds,

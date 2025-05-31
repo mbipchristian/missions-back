@@ -1,0 +1,13 @@
+package com.missions_back.missions_back.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class FonctionSummaryDto {
+    private Long id;
+    private String nom;
+}

@@ -20,21 +20,15 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Where(clause = "actif = true")
-@Table(name = "mandats")
-public class Mandat {
+@Table(name = "etapes")
+public class Etape {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(updatable = false, nullable = false)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String reference;
-
     @Column(nullable = false)
-    private String objectif;
-
-    @Column(nullable = false)
-    private boolean missionDeControle;
+    private String nom;
 
     @Column(nullable = false)
     private Date dateDebut;
@@ -44,6 +38,9 @@ public class Mandat {
 
     @Column(nullable = false)
     private int duree;
+
+    @Column(nullable = false)
+    private int ordre;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -59,27 +56,27 @@ public class Mandat {
     @Column
     private boolean actif = true;
 
-    //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
+    //-------------------------------RELATIONS AVEC LES AUTRES TABLES---------------------------------
 
-    @ManyToMany(mappedBy = "mandats")
-    private List<User> users;
-
-    // @OneToMany(mappedBy = "mandat")
-    // private List<OrdreMission> ordresMission;
+    @ManyToOne
+    @JoinColumn(name = "mandat_id", nullable = false)
+    private Mandat mandat;
 
     @ManyToMany()
-    @JoinTable(name = "mandat_ville",
-            joinColumns = @JoinColumn(name = "mandat_id"),
+    @JoinTable(name = "etape_user",
+            joinColumns = @JoinColumn(name = "etape_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private List<User> users;
+
+    @ManyToMany()
+    @JoinTable(name = "etape_ville",
+            joinColumns = @JoinColumn(name = "etape_id"),
             inverseJoinColumns = @JoinColumn(name = "ville_id"))
     private List<Ville> villes;
 
     @ManyToMany()
-    @JoinTable(name = "mandat_ressource",
-            joinColumns = @JoinColumn(name = "mandat_id"),
+    @JoinTable(name = "etape_ressource",
+            joinColumns = @JoinColumn(name = "etape_id"),
             inverseJoinColumns = @JoinColumn(name = "ressource_id"))
     private List<Ressource> ressources;
-
-    @OneToOne
-    @JoinColumn(name = "rapport_id")
-    private Rapport rapport;
 }

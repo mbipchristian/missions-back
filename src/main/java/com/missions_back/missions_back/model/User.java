@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Where;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.*;
@@ -38,7 +39,7 @@ public class User implements UserDetails {
     private String password;
 
     @Column(nullable = false)
-    private Long QuotaAnnuel;
+    private Long quotaAnnuel;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -57,7 +58,8 @@ public class User implements UserDetails {
 //--------------------------------------------METHODES DE LA CLASSE USERDETAILS------------------------------------------------
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.getName().toString());
+        return List.of(authority);
     }
 
     @Override
@@ -142,22 +144,32 @@ public class User implements UserDetails {
         return this;
     }
     public Long getQuotaAnnuel() {
-        return QuotaAnnuel;
+        return quotaAnnuel;
     }
     public User setQuotaAnnuel(Long quotaAnnuel) {
-        QuotaAnnuel = quotaAnnuel;
+        this.quotaAnnuel = quotaAnnuel;
         return this;
     }
+
+    public Role getRole() {
+    return role;
+}
+
+public User setRole(Role role) {
+    this.role = role;
+
+    return this;
+}
 //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
 
     @ManyToOne
-    @JoinColumn(name = "role_id")
+    @JoinColumn(name = "role_id", referencedColumnName = "id", nullable = false)
     private Role role;
 
-    @ManyToOne
-    @JoinColumn(name = "Grade_id")
-    private Grade grade;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fonction_id", nullable = false)
+    private Fonction fonction;
+    
     @ManyToMany()
     @JoinTable(name = "user_mandat",
             joinColumns = @JoinColumn(name = "user_id"),

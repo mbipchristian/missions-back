@@ -18,24 +18,30 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Where(clause = "actif = true")
-@Table(name = "grades")
-public class Grade {
+@Table(name = "pieces_jointes")
+public class PieceJointe {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(updatable = false, nullable = false)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String code;
-
-    @Column(nullable = false, unique = true)
-    private String name;
+    @Column(nullable = false)
+    private String nom;
 
     @Column(nullable = false)
-    private Long fraisInterne;
+    private String nomOriginal;
 
     @Column(nullable = false)
-    private Long fraisExterne;
+    private String cheminFichier;
+
+    @Column(nullable = false)
+    private String typeMime;
+
+    @Column(nullable = false)
+    private Long taille;
+
+    @Column
+    private String description;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -50,4 +56,22 @@ public class Grade {
 
     @Column
     private boolean actif = true;
+
+    //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
+
+    @ManyToOne
+    @JoinColumn(name = "mandat_id")
+    private Mandat mandat;
+
+    @ManyToOne
+    @JoinColumn(name = "ordre_mission_id")
+    private OrdreMission ordreMission;
+
+    @ManyToOne
+    @JoinColumn(name = "rapport_id")
+    private Rapport rapport;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 }

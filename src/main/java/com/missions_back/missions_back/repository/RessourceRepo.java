@@ -8,14 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.missions_back.missions_back.model.Ressource;
 
 public interface RessourceRepo extends JpaRepository<Ressource, Long> {
-    Optional<Ressource> findByCode(String code);
+    Optional<Ressource> findByName(String name);
     
     List<Ressource> findByNameContainingIgnoreCase(String name);
     
-    // @Query("SELECT r FROM Ressource r WHERE r.quantite < :seuil")
-    // List<Ressource> findRessourcesWithLowStock(@Param("seuil") Long seuil);
-    
-    boolean existsByCode(String code);
+    boolean existsByName(String name);
     
     Optional<Ressource> findByIdAndActifTrue(Long id);
     

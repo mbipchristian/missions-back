@@ -1,140 +1,130 @@
 package com.missions_back.missions_back.controller;
 
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.missions_back.missions_back.dto.MandatDto;
 import com.missions_back.missions_back.dto.MandatResponseDto;
 import com.missions_back.missions_back.service.MandatService;
+import com.missions_back.missions_back.service.PdfGenerationService;
 
 import jakarta.persistence.EntityNotFoundException;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @RestController
 @RequestMapping("/auth/mandats")
+@CrossOrigin(origins = "*")
 public class MandatController {
-    private final MandatService mandatService;
-    public MandatController(MandatService mandatService) {
-        this.mandatService = mandatService;
-    }
 
-    @PostMapping("/create")
-    public ResponseEntity<?> createMandat( @RequestBody MandatDto mandatDto) {
-        try {
-            MandatResponseDto createdMandat = mandatService.createMandat(mandatDto);
-            return ResponseEntity.ok(createdMandat);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la création du mandat: " + e.getMessage());
-        }
-    }
+    @Autowired
+    private MandatService mandatService;
+
+    @Autowired
+    private PdfGenerationService pdfGenerationService;
+
     @GetMapping("/all")
-    public ResponseEntity<?> getAllMandats() {
+    public ResponseEntity<List<MandatResponseDto>> getAllMandats() {
         try {
             List<MandatResponseDto> mandats = mandatService.getAllMandats();
             return ResponseEntity.ok(mandats);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la récupération des mandats: " + e.getMessage());
-        }
-    }
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getMandatById(@PathVariable Long id) {
-        try {
-            MandatResponseDto mandat = mandatService.getMandatById(id);
-            return ResponseEntity.ok(mandat);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la récupération du mandat: " + e.getMessage());
-        }
-    }
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateMandat(@PathVariable Long id, @RequestBody MandatDto mandatDto) {
-        try {
-            MandatResponseDto updatedMandat = mandatService.updateMandat(id, mandatDto);
-            return ResponseEntity.ok(updatedMandat);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la mise à jour du mandat: " + e.getMessage());
-        }
-    }
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteMandat(@PathVariable Long id) {
-        try {
-            mandatService.deleteMandat(id);
-            return ResponseEntity.ok("Mandat supprimé avec succès");
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la suppression du mandat: " + e.getMessage());
-        }
-    }
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getMandatsByUser(@PathVariable Long userId) {
-        try {
-            List<MandatResponseDto> mandats = mandatService.getMandatsByUser(userId);
-            return ResponseEntity.ok(mandats);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la récupération des mandats de l'utilisateur: " + e.getMessage());
-        }
-    }
-    @GetMapping("/active")
-    public ResponseEntity<?> getActiveMandats() {
-        try {
-            List<MandatResponseDto> mandats = mandatService.getActiveMandats();
-            return ResponseEntity.ok(mandats);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la récupération des mandats actifs: " + e.getMessage());
-        }
-    }
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<?> toggleMandatStatus(@PathVariable Long id, @RequestParam boolean actif) {
-        try {
-            // Cette méthode devra être ajoutée au service
-            // MandatResponseDto mandat = mandatService.toggleMandatStatus(id, actif);
-            return ResponseEntity.ok("Statut du mandat modifié avec succès");
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la modification du statut: " + e.getMessage());
-        }
-    }
-    @GetMapping("/type/controle")
-    public ResponseEntity<?> getMandatsByType(@RequestParam boolean missionDeControle) {
-        try {
-            // Cette méthode devra être ajoutée au service
-            // List<MandatResponseDto> mandats = mandatService.getMandatsByType(missionDeControle);
-            return ResponseEntity.ok("Recherche par type à implémenter");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la recherche par type: " + e.getMessage());
-        }
-    }
-    @GetMapping("/ville/{villeId}")
-    public ResponseEntity<?> getMandatsByVille(@PathVariable Long villeId) {
-        try {
-            // Cette méthode devra être ajoutée au service
-            // List<MandatResponseDto> mandats = mandatService.getMandatsByVille(villeId);
-            return ResponseEntity.ok("Recherche par ville à implémenter");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la recherche par ville: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<MandatResponseDto> getMandatById(@PathVariable Long id) {
+        try {
+            MandatResponseDto mandat = mandatService.getMandatById(id);
+            if (mandat != null) {
+                return ResponseEntity.ok(mandat);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/create")
+    public ResponseEntity<MandatResponseDto> createMandat(@RequestBody MandatDto mandatDto) {
+        try {
+            MandatResponseDto createdMandat = mandatService.createMandat(mandatDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdMandat);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(null);
+        }
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<ByteArrayResource> downloadMandatPdf(@PathVariable Long id) {
+        try {
+            // Récupérer les détails du mandat
+            MandatResponseDto mandat = mandatService.getMandatById(id);
+            if (mandat == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Générer le PDF
+            byte[] pdfBytes = pdfGenerationService.generateMandatPdf(mandat);
+            
+            // Créer la ressource ByteArray
+            ByteArrayResource resource = new ByteArrayResource(pdfBytes);
+
+            // Définir les headers pour le téléchargement
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, 
+                       "attachment; filename=mandat-" + mandat.reference() + ".pdf");
+            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(pdfBytes.length)
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(resource);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<MandatResponseDto> updateMandat(
+            @PathVariable Long id, 
+            @RequestBody MandatDto mandatDto) {
+        try {
+            MandatResponseDto updatedMandat = mandatService.updateMandat(id, mandatDto);
+            if (updatedMandat != null) {
+                return ResponseEntity.ok(updatedMandat);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteMandat(@PathVariable Long id) {
+        try {
+            boolean deleted = mandatService.softDeleteMandat(id);
+            if (deleted) {
+                return ResponseEntity.noContent().build();
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

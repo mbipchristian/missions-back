@@ -53,4 +53,7 @@ public class Ville {
 
     @ManyToMany(mappedBy = "villes")
     private List<Mandat> mandats;
+
+    @ManyToMany(mappedBy = "villes")
+    private List<Etape> etapes;
 }
