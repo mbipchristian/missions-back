@@ -45,6 +45,9 @@ public class User implements UserDetails {
     @Column(updatable = false)
     private LocalDateTime created_at;
 
+    @Column(nullable = false)
+    private String fonction;
+
     @UpdateTimestamp
     @Column
     private LocalDateTime updated_at;
@@ -150,6 +153,13 @@ public class User implements UserDetails {
         this.quotaAnnuel = quotaAnnuel;
         return this;
     }
+    public String getFonction(){
+        return fonction;
+    }
+    public User setFonction(String fonction){
+        this.fonction = fonction;
+        return this;
+    }
 
     public Role getRole() {
     return role;
@@ -165,14 +175,7 @@ public User setRole(Role role) {
     @ManyToOne
     @JoinColumn(name = "role_id", referencedColumnName = "id", nullable = false)
     private Role role;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fonction_id", nullable = false)
-    private Fonction fonction;
     
-    @ManyToMany()
-    @JoinTable(name = "user_mandat",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "mandat_id"))
+    @ManyToMany(mappedBy = "users")
     private List<Mandat> mandats;
 }

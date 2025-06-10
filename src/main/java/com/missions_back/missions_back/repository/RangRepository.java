@@ -40,7 +40,4 @@ public interface RangRepository extends JpaRepository<Rang, Long> {
     // Compter les rangs actifs
     long countByActifTrue();
     
-    // Trouver les rangs qui ont des fonctions associées
-    @Query("SELECT DISTINCT r FROM Rang r JOIN r.fonctions f WHERE r.actif = true AND f.actif = true")
-    List<Rang> findRangsWithActiveFonctions();
 }

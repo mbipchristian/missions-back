@@ -61,11 +61,16 @@ public class Mandat {
 
     //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
 
-    @ManyToMany(mappedBy = "mandats")
-    private List<User> users;
+
 
     // @OneToMany(mappedBy = "mandat")
     // private List<OrdreMission> ordresMission;
+
+    @ManyToMany()
+    @JoinTable(name = "user_mandat",
+            joinColumns = @JoinColumn(name = "mandat_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private List<User> users;
 
     @ManyToMany()
     @JoinTable(name = "mandat_ville",

@@ -2,7 +2,6 @@ package com.missions_back.missions_back.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Where;
@@ -48,10 +47,6 @@ public class Rang {
 
     @Column
     private boolean actif = true;
-
-    // Relations
-    @OneToMany(mappedBy = "rang", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Fonction> fonctions;
 
     // Constructeurs
     public Rang() {}

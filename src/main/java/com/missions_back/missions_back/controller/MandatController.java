@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -72,7 +73,7 @@ public class MandatController {
                 return ResponseEntity.notFound().build();
             }
 
-            // Générer le PDF
+            // Générer le PDF avec toutes les étapes incluses
             byte[] pdfBytes = pdfGenerationService.generateMandatPdf(mandat);
             
             // Créer la ressource ByteArray
@@ -81,7 +82,7 @@ public class MandatController {
             // Définir les headers pour le téléchargement
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, 
-                       "attachment; filename=mandat-" + mandat.reference() + ".pdf");
+                       "attachment; filename=mandat-" + mandat.reference() + "-complet.pdf");
             headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE);
 
             return ResponseEntity.ok()

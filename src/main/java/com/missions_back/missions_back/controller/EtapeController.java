@@ -43,7 +43,7 @@ public class EtapeController {
     /**
      * Créer une nouvelle étape
      */
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<EtapeResponseDto> createEtape(@Valid @RequestBody EtapeDto etapeDto) {
         EtapeResponseDto createdEtape = etapeService.createEtape(etapeDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdEtape);

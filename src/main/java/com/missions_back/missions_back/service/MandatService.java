@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.missions_back.missions_back.dto.FonctionResponseDto;
 import com.missions_back.missions_back.dto.MandatDto;
 import com.missions_back.missions_back.dto.MandatResponseDto;
 import com.missions_back.missions_back.dto.RapportResponseDto;
@@ -258,16 +257,7 @@ public class MandatService {
                 user.getRole().getUpdated_at()
             ) : null;
 
-        FonctionResponseDto fonctionDto = user.getFonction() != null ?
-            new FonctionResponseDto(
-                user.getFonction().getId(),
-                user.getFonction().getNom(),
-                user.getFonction().getCreated_at(),
-                user.getFonction().getUpdated_at(),
-                user.getFonction().getRang().getId(),
-                user.getFonction().getRang().getNom(),
-                user.getFonction().getRang().getCode()
-            ) : null;
+        
 
         return new UserResponseDto(
             user.getId(),
@@ -276,7 +266,7 @@ public class MandatService {
             user.getMatricule(),
             user.getQuotaAnnuel(),
             roleDto,
-            fonctionDto,
+            user.getFonction(),
             user.getCreated_at(),
             user.getUpdated_at()
         );

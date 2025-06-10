@@ -21,7 +21,7 @@ public class RangController {
     private RangService rangService;
 
     // Créer un nouveau rang
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<?> createRang( @RequestBody RangDto rangDto) {
         try {
             RangResponseDto createdRang = rangService.createRang(rangDto);
@@ -35,7 +35,7 @@ public class RangController {
     }
 
     // Récupérer tous les rangs actifs
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<RangResponseDto>> getAllRangs() {
         List<RangResponseDto> rangs = rangService.getAllRangs();
         return new ResponseEntity<>(rangs, HttpStatus.OK);
@@ -92,13 +92,6 @@ public class RangController {
             @RequestParam(required = false) String nom,
             @RequestParam(required = false) String code) {
         List<RangResponseDto> rangs = rangService.searchRangs(nom, code);
-        return new ResponseEntity<>(rangs, HttpStatus.OK);
-    }
-
-    // Récupérer les rangs qui ont des fonctions associées
-    @GetMapping("/with-fonctions")
-    public ResponseEntity<List<RangResponseDto>> getRangsWithFonctions() {
-        List<RangResponseDto> rangs = rangService.getRangsWithFonctions();
         return new ResponseEntity<>(rangs, HttpStatus.OK);
     }
 

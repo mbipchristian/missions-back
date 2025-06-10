@@ -11,16 +11,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.missions_back.missions_back.dto.FonctionResponseDto;
 import com.missions_back.missions_back.dto.LoginUserDto;
 import com.missions_back.missions_back.dto.RegisterUserDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
 import com.missions_back.missions_back.dto.UserResponseDto;
 import com.missions_back.missions_back.dto.UserRoleUpdateDto;
-import com.missions_back.missions_back.model.Fonction;
 import com.missions_back.missions_back.model.Role;
 import com.missions_back.missions_back.model.User;
-import com.missions_back.missions_back.repository.FonctionRepository;
 import com.missions_back.missions_back.repository.RoleRepo;
 import com.missions_back.missions_back.repository.UserRepo;
 
@@ -32,19 +29,14 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
     private RoleRepo roleRepo;
-    private FonctionRepository fonctionRepository;
-    private RoleService roleService;
-    private FonctionService fonctionService;
-    
+    private RoleService roleService;    
 
-    public UserService(UserRepo userRepo, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, RoleRepo roleRepo, RoleService roleService, FonctionRepository fonctionRepository, FonctionService fonctionService) {
+    public UserService(UserRepo userRepo, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, RoleRepo roleRepo, RoleService roleService) {
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.roleRepo = roleRepo;
         this.roleService = roleService;
-        this.fonctionRepository = fonctionRepository;
-        this.fonctionService = fonctionService;
     }
 
     public User signup(RegisterUserDto input) {
@@ -53,15 +45,13 @@ public class UserService {
         Role role = roleRepo.findById(input.roleId())
                 .orElseThrow(() -> new EntityNotFoundException("Role not found with ID : " + input.roleId()));
 
-        Fonction fonction = fonctionRepository.findById(input.fonctionId())
-                .orElseThrow(() -> new EntityNotFoundException("Grade not found with ID : " + input.fonctionId()));
-
         // Créer et configurer l'utilisateur
         User user = new User()
                 .setName(input.username())
                 .setEmail(input.email())
                 .setMatricule(input.matricule())
                 .setQuotaAnnuel(input.quotaAnnuel())
+                .setFonction(input.fonction())
                 .setPassword(passwordEncoder.encode(input.password()))
                 .setCreatedAt(LocalDateTime.now())
                 .setUpdatedAt(LocalDateTime.now())
@@ -69,10 +59,9 @@ public class UserService {
 
         // Associer le rôle et la fonction à l'utilisateur
         user.setRole(role);
-        user.setFonction(fonction);
         return userRepo.save(user);
     }
-
+    
     public UserDetails authenticate(LoginUserDto input) {
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(input.email(), input.password())
@@ -139,10 +128,8 @@ public class UserService {
     // Méthode pour convertir un utilisateur en UserResponseDto
     private UserResponseDto convertToUserResponseDto(User user) {
         RoleResponseDto roleDto = null;
-        FonctionResponseDto fonctionDto = null;
         if (user.getRole() != null && user.getRole() != null) {
             roleDto = convertToRoleResponseDto(user.getRole());
-            fonctionDto = convertToFonctionResponseDto(user.getFonction());
         }
         return new UserResponseDto(
             user.getId(),
@@ -151,7 +138,7 @@ public class UserService {
             user.getMatricule(),
             user.getQuotaAnnuel(),
             roleDto,  
-            fonctionDto,
+            user.getFonction(),
             user.getCreatedAt(),
             user.getUpdatedAt()
         );
@@ -170,25 +157,6 @@ public class UserService {
         );
     }
 
-    public static FonctionResponseDto convertToFonctionResponseDto(Fonction fonction) {
-        if (fonction == null) {
-            return null;
-        }
-        
-        FonctionResponseDto dto = new FonctionResponseDto();
-        dto.setId(fonction.getId());
-        dto.setNom(fonction.getNom());
-        dto.setCreated_at(fonction.getCreated_at());
-        dto.setUpdated_at(fonction.getUpdated_at());
-        
-        // Mapping des informations du rang associé
-        if (fonction.getRang() != null) {
-            dto.setRangId(fonction.getRang().getId());
-            dto.setRangNom(fonction.getRang().getNom());
-            dto.setRangCode(fonction.getRang().getCode());
-        }
-        
-        return dto;
-}
+    
     
 }

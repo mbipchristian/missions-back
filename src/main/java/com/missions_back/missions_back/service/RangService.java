@@ -1,12 +1,9 @@
 package com.missions_back.missions_back.service;
 
-import com.missions_back.missions_back.dto.FonctionSummaryDto;
 import com.missions_back.missions_back.dto.RangDto;
 import com.missions_back.missions_back.dto.RangResponseDto;
 import com.missions_back.missions_back.model.Rang;
-import com.missions_back.missions_back.model.Fonction;
 import com.missions_back.missions_back.repository.RangRepository;
-import com.missions_back.missions_back.repository.FonctionRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,9 +20,6 @@ public class RangService {
 
     @Autowired
     private RangRepository rangRepository;
-
-    @Autowired
-    private FonctionRepository fonctionRepository;
 
     // Créer un nouveau rang
     public RangResponseDto createRang(RangDto rangDto) {
@@ -100,12 +94,7 @@ public class RangService {
     public void deleteRang(Long id) {
         Rang rang = rangRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rang non trouvé avec l'ID: " + id));
-
-        // Vérifier s'il y a des fonctions associées
-        long fonctionsCount = fonctionRepository.countByRangIdAndActifTrue(id);
-        if (fonctionsCount > 0) {
-            throw new RuntimeException("Impossible de supprimer ce rang car il est associé à " + fonctionsCount + " fonction(s)");
-        }
+    
 
         rang.setActif(false);
         rang.setDeletedAt(LocalDateTime.now());
@@ -116,14 +105,6 @@ public class RangService {
     @Transactional(readOnly = true)
     public List<RangResponseDto> searchRangs(String nom, String code) {
         return rangRepository.findByCriteria(nom, code).stream()
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
-    }
-
-    // Récupérer les rangs qui ont des fonctions associées
-    @Transactional(readOnly = true)
-    public List<RangResponseDto> getRangsWithFonctions() {
-        return rangRepository.findRangsWithActiveFonctions().stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
     }
@@ -160,14 +141,7 @@ public class RangService {
         dto.setUpdated_at(rang.getUpdated_at());
         dto.setActif(rang.isActif());
         
-        // Mapper les fonctions associées
-        if (rang.getFonctions() != null) {
-            List<FonctionSummaryDto> fonctions = rang.getFonctions().stream()
-                    .filter(Fonction::isActif)
-                    .map(fonction -> new FonctionSummaryDto(fonction.getId(), fonction.getNom()))
-                    .collect(Collectors.toList());
-            dto.setFonctions(fonctions);
-        }
+        
         
         return dto;
     }

@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.missions_back.missions_back.dto.EtapeDto;
 import com.missions_back.missions_back.dto.EtapeResponseDto;
-import com.missions_back.missions_back.dto.FonctionResponseDto;
 import com.missions_back.missions_back.dto.RessourceResponseDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
 import com.missions_back.missions_back.dto.UserResponseDto;
@@ -238,16 +237,7 @@ public class EtapeService {
                 user.getRole().getUpdated_at()
             ) : null;
 
-        FonctionResponseDto fonctionDto = user.getFonction() != null ?
-            new FonctionResponseDto(
-                user.getFonction().getId(),
-                user.getFonction().getNom(),
-                user.getFonction().getCreated_at(),
-                user.getFonction().getUpdated_at(),
-                user.getFonction().getRang().getId(),
-                user.getFonction().getRang().getNom(),
-                user.getFonction().getRang().getCode()
-            ) : null;
+        
 
         return new UserResponseDto(
             user.getId(),
@@ -256,7 +246,7 @@ public class EtapeService {
             user.getMatricule(),
             user.getQuotaAnnuel(),
             roleDto,
-            fonctionDto,
+            user.getFonction(),
             user.getCreated_at(),
             user.getUpdated_at()
         );

@@ -7,7 +7,7 @@ public record RegisterUserDto(
     String username, 
     Long quotaAnnuel,
     Long roleId, 
-    Long fonctionId,
+    String fonction,
     Long rangId
     ) {
     
