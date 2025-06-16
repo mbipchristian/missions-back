@@ -45,6 +45,19 @@ public class Mandat {
     @Column(nullable = false)
     private int duree;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MandatStatut statut = MandatStatut.EN_ATTENTE_CONFIRMATION;
+
+    @Column
+    private Long createdByUserId;
+
+    @Column
+    private Long confirmeParUserId;
+
+    @Column
+    private LocalDateTime dateConfirmation;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime created_at;
@@ -59,12 +72,8 @@ public class Mandat {
     @Column
     private boolean actif = true;
 
-    //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
-
-
-
-    // @OneToMany(mappedBy = "mandat")
-    // private List<OrdreMission> ordresMission;
+    @OneToMany(mappedBy = "mandat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<OrdreMission> ordresMission;
 
     @ManyToMany()
     @JoinTable(name = "user_mandat",

@@ -1,19 +1,23 @@
 package com.missions_back.missions_back.service;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.missions_back.missions_back.dto.OrdreMissionDto;
 import com.missions_back.missions_back.dto.OrdreMissionResponseDto;
-import com.missions_back.missions_back.model.Mandat;
 import com.missions_back.missions_back.model.OrdreMission;
+import com.missions_back.missions_back.model.OrdreMissionStatut;
+import com.missions_back.missions_back.model.RoleEnum;
 import com.missions_back.missions_back.model.User;
 import com.missions_back.missions_back.repository.MandatRepo;
 import com.missions_back.missions_back.repository.OrdreMissionRepo;
 import com.missions_back.missions_back.repository.UserRepo;
+
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class OrdreMissionService {
@@ -27,198 +31,135 @@ public class OrdreMissionService {
         this.mandatRepo = mandatRepo;
     }
 
+    @Transactional
+    public OrdreMissionResponseDto ajouterPieceJointeEtSoumettre(Long ordreMissionId, Long userId) {
+        OrdreMission ordreMission = ordreMissionRepo.findById(ordreMissionId)
+            .orElseThrow(() -> new EntityNotFoundException("Ordre de mission non trouvé"));
 
+        // Vérifier que l'utilisateur a les droits (AGENT_RESSOURCES_HUMAINES)
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
+        
+        if (!user.getRole().equals(RoleEnum.AGENT_RESSOURCES_HUMAINES) && 
+            !user.getRole().equals(RoleEnum.ADMIN)) {
+            throw new IllegalArgumentException("Seul l'agent des ressources humaines peut soumettre un ordre de mission");
+        }
+
+        if (ordreMission.getStatut() != OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF) {
+            throw new IllegalArgumentException("Cet ordre de mission ne peut pas être soumis dans son état actuel");
+        }
+
+        // Marquer comme ayant une pièce jointe et soumettre
+        ordreMission.setPieceJointeAjoutee(true);
+        ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_CONFIRMATION);
+        ordreMission.setDateSoumission(LocalDateTime.now());
+        
+        OrdreMission updatedOrdreMission = ordreMissionRepo.save(ordreMission);
+        return mapToResponseDto(updatedOrdreMission);
+    }
+    public List<OrdreMissionResponseDto> getOrdresMissionParMandat(Long mandatId) {
+        // Vérifier que le mandat existe
+        if (!mandatRepo.existsById(mandatId)) {
+            throw new EntityNotFoundException("Mandat non trouvé avec l'ID: " + mandatId);
+        }
+        
+        // Récupérer les ordres de mission du mandat
+        List<OrdreMission> ordres = ordreMissionRepo.findByMandatId(mandatId);
+        
+        // Convertir en DTO
+        return ordres.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public OrdreMissionResponseDto confirmerOrdreMission(Long ordreMissionId, Long userId) {
+        // Vérifier que l'utilisateur a les droits (DIRECTEUR_RESSOURCES_HUMAINES)
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
+        
+        if (!user.getRole().equals(RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES) && 
+            !user.getRole().equals(RoleEnum.ADMIN)) {
+            throw new IllegalArgumentException("Seul le directeur des ressources humaines peut confirmer un ordre de mission");
+        }
+
+        OrdreMission ordreMission = ordreMissionRepo.findById(ordreMissionId)
+            .orElseThrow(() -> new EntityNotFoundException("Ordre de mission non trouvé"));
+
+        if (ordreMission.getStatut() != OrdreMissionStatut.EN_ATTENTE_CONFIRMATION) {
+            throw new IllegalArgumentException("Cet ordre de mission ne peut pas être confirmé dans son état actuel");
+        }
+
+        // Confirmer l'ordre de mission
+        ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_EXECUTION);
+        ordreMission.setConfirmeParUserId(userId);
+        ordreMission.setDateConfirmation(LocalDateTime.now());
+        
+        OrdreMission confirmedOrdreMission = ordreMissionRepo.save(ordreMission);
+        return mapToResponseDto(confirmedOrdreMission);
+    }
+
+    public List<OrdreMissionResponseDto> getOrdresMissionEnAttenteConfirmation() {
+        List<OrdreMission> ordresMission = ordreMissionRepo.findByStatut(OrdreMissionStatut.EN_ATTENTE_CONFIRMATION);
+        return ordresMission.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<OrdreMissionResponseDto> getOrdresMissionVisiblesPourAgent() {
+        List<OrdreMission> ordresMission = ordreMissionRepo.findByStatutIn(
+            List.of(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF, OrdreMissionStatut.EN_ATTENTE_CONFIRMATION)
+        );
+        return ordresMission.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<OrdreMissionResponseDto> getOrdresMissionPourUtilisateur(Long userId) {
+        List<OrdreMission> ordresMission = ordreMissionRepo.findByUserIdAndStatutNot(
+            userId, OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
+        return ordresMission.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void mettreAJourStatutsAutomatiquement() {
+        Date maintenant = new Date();
+        
+        // Mettre à jour les ordres EN_ATTENTE_EXECUTION vers EN_COURS
+        List<OrdreMission> ordresADemarrer = ordreMissionRepo.findByStatutAndDateDebutLessThanEqual(
+            OrdreMissionStatut.EN_ATTENTE_EXECUTION, maintenant);
+        
+        for (OrdreMission ordre : ordresADemarrer) {
+            ordre.setStatut(OrdreMissionStatut.EN_COURS);
+            ordreMissionRepo.save(ordre);
+        }
+        
+        // Mettre à jour les ordres EN_COURS vers ACHEVE
+        List<OrdreMission> ordresATerminer = ordreMissionRepo.findByStatutAndDateFinLessThanEqual(
+            OrdreMissionStatut.EN_COURS, maintenant);
+        
+        for (OrdreMission ordre : ordresATerminer) {
+            ordre.setStatut(OrdreMissionStatut.ACHEVE);
+            ordreMissionRepo.save(ordre);
+        }
+    }
+
+    // Autres méthodes existantes...
     public List<OrdreMissionResponseDto> getAllOrdresMission() {
         return ordreMissionRepo.findAllActive()
                 .stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
     }
-    
+
     public OrdreMissionResponseDto getOrdreMissionById(Long id) {
         OrdreMission ordreMission = ordreMissionRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ordre de mission non trouvé avec l'ID: " + id));
         return mapToResponseDto(ordreMission);
     }
-    
-    public OrdreMissionResponseDto getOrdreMissionByReference(String reference) {
-        OrdreMission ordreMission = ordreMissionRepo.findByReference(reference)
-                .orElseThrow(() -> new RuntimeException("Ordre de mission non trouvé avec la référence: " + reference));
-        return mapToResponseDto(ordreMission);
-    }
-    public List<OrdreMissionResponseDto> getOrdresMissionByUserId(Long userId) {
-        return ordreMissionRepo.findActiveByUserId(userId)
-                .stream()
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
-    }
-    
-    public List<OrdreMissionResponseDto> getOrdresMissionByMandatId(Long mandatId) {
-        return ordreMissionRepo.findActiveByMandatId(mandatId)
-                .stream()
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
-    }
-    private void validateBusinessRules(User user, Mandat mandat, OrdreMissionDto dto) {
-        Long quotaAnnuel = user.getQuotaAnnuel();
-        
-        // 1. Si quota annuel < 100
-        if (quotaAnnuel < 100) {
-            // Vérifier conflit de dates avec ordres existants
-            List<OrdreMission> conflictingOrders = ordreMissionRepo
-                    .findActiveByUserIdWithDateConflict(user.getId(), dto.dateDebut());
-            
-            if (!conflictingOrders.isEmpty()) {
-                throw new RuntimeException("Il existe déjà un ordre de mission dont la date de fin chevauche avec la date de début de cette mission");
-            }
-            
-            // Vérifier si quota + durée > 100
-            Long currentTotalDuration = ordreMissionRepo.sumDureeByUserId(user.getId());
-            if (currentTotalDuration == null) currentTotalDuration = 0L;
-            
-            if ((quotaAnnuel + dto.duree()) > 100) {
-                // Vérifier si c'est une mission de contrôle
-                if (!mandat.isMissionDeControle()) {
-                    throw new RuntimeException("Le quota annuel sera dépassé. Seules les missions de contrôle sont autorisées");
-                }
-            }
-        }
-        // 2. Si quota annuel >= 100
-        else {
-            // Seules les missions de contrôle sont autorisées
-            if (!mandat.isMissionDeControle()) {
-                throw new RuntimeException("Quota annuel déjà atteint. Seules les missions de contrôle sont autorisées");
-            }
-            
-            // Vérifier conflit de dates même pour missions de contrôle
-            List<OrdreMission> conflictingOrders = ordreMissionRepo
-                    .findActiveByUserIdWithDateConflict(user.getId(), dto.dateDebut());
-            
-            if (!conflictingOrders.isEmpty()) {
-                throw new RuntimeException("Il existe déjà un ordre de mission dont la date de fin chevauche avec la date de début de cette mission");
-            }
-        }
-    }
-    public OrdreMissionResponseDto createOrdreMission(OrdreMissionDto ordreMissionDto, Long userId) {
-        // Vérifications de base
-        if (ordreMissionRepo.existsByReference(ordreMissionDto.reference())) {
-            throw new RuntimeException("Un ordre de mission avec cette référence existe déjà");
-        }
-        
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID: " + userId));
-        
-        Mandat mandat = mandatRepo.findById(ordreMissionDto.mandatId())
-                .orElseThrow(() -> new RuntimeException("Mandat non trouvé avec l'ID: " + ordreMissionDto.mandatId()));
-        
-        // Validation des montants et dates
-        validateMontants(ordreMissionDto);        
-        // Application de la logique métier complexe
-        validateBusinessRules(user, mandat, ordreMissionDto);
-        
-        OrdreMission ordreMission = new OrdreMission();
-        ordreMission.setReference(ordreMissionDto.reference());
-        ordreMission.setObjectif(ordreMissionDto.objectif());
-        ordreMission.setModePaiement(ordreMissionDto.modePaiement());
-        ordreMission.setDevise(ordreMissionDto.devise());
-        ordreMission.setTauxAvance(ordreMissionDto.tauxAvance());
-        ordreMission.setDateDebut(ordreMissionDto.dateDebut());
-        ordreMission.setDateFin(ordreMissionDto.dateFin());
-        ordreMission.setDuree(ordreMissionDto.duree());
-        ordreMission.setDecompteTotal(ordreMissionDto.decompteTotal());
-        ordreMission.setDecompteAvance(ordreMissionDto.decompteAvance());
-        ordreMission.setDecompteRelicat(ordreMissionDto.decompteRelicat());
-        ordreMission.setUser(user);
-        ordreMission.setMandat(mandat);
-        ordreMission.setActif(true);
 
-        // Mise à jour du quota annuel
-        Long nouveauQuotaAnnuel = user.getQuotaAnnuel() + ordreMission.getDuree().intValue();
-        user.setQuotaAnnuel(nouveauQuotaAnnuel);
-        
-        // Sauvegarde de l'utilisateur avec le nouveau quota
-        userRepo.save(user);
-        
-        OrdreMission savedOrdreMission = ordreMissionRepo.save(ordreMission);
-        return mapToResponseDto(savedOrdreMission);
-    }
-    
-    public OrdreMissionResponseDto updateOrdreMission(Long id, OrdreMissionDto ordreMissionDto, Long userId) {
-        OrdreMission existingOrdreMission = ordreMissionRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ordre de mission non trouvé avec l'ID: " + id));
-        
-        // Vérifier si la nouvelle référence n'existe pas déjà (sauf pour l'ordre actuel)
-        if (!existingOrdreMission.getReference().equals(ordreMissionDto.reference()) 
-            && ordreMissionRepo.existsByReference(ordreMissionDto.reference())) {
-            throw new RuntimeException("Un ordre de mission avec cette référence existe déjà");
-        }
-        
-        Mandat mandat = mandatRepo.findById(ordreMissionDto.mandatId())
-                .orElseThrow(() -> new RuntimeException("Mandat non trouvé avec l'ID: " + ordreMissionDto.mandatId()));
-
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID: " + userId));
-        
-        // Validation des montants
-        validateMontants(ordreMissionDto);
-        
-        existingOrdreMission.setReference(ordreMissionDto.reference());
-        existingOrdreMission.setObjectif(ordreMissionDto.objectif());
-        existingOrdreMission.setModePaiement(ordreMissionDto.modePaiement());
-        existingOrdreMission.setDevise(ordreMissionDto.devise());
-        existingOrdreMission.setTauxAvance(ordreMissionDto.tauxAvance());
-        existingOrdreMission.setDuree(ordreMissionDto.duree());
-        existingOrdreMission.setDecompteTotal(ordreMissionDto.decompteTotal());
-        existingOrdreMission.setDecompteAvance(ordreMissionDto.decompteAvance());
-        existingOrdreMission.setDecompteRelicat(ordreMissionDto.decompteRelicat());
-        existingOrdreMission.setMandat(mandat);
-        
-        OrdreMission updatedOrdreMission = ordreMissionRepo.save(existingOrdreMission);
-
-        // Mise à jour du quota annuel
-        Long nouveauQuotaAnnuel = user.getQuotaAnnuel() + updatedOrdreMission.getDuree().intValue();
-        user.setQuotaAnnuel(nouveauQuotaAnnuel);
-        // Sauvegarde de l'utilisateur avec le nouveau quota
-        userRepo.save(user);
-        
-        return mapToResponseDto(updatedOrdreMission);
-    }
-    public void deleteOrdreMission(Long id) {
-        OrdreMission ordreMission = ordreMissionRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ordre de mission non trouvé avec l'ID: " + id));
-        
-        ordreMission.setActif(false);
-        ordreMission.setDeleted_at(LocalDateTime.now());
-        ordreMissionRepo.save(ordreMission);
-    }
-    public Long countOrdresMissionByMandat(Long mandatId) {
-        return ordreMissionRepo.countActiveByMandatId(mandatId);
-    }
-    private void validateMontants(OrdreMissionDto dto) {
-        if (dto.tauxAvance() < 0 || dto.tauxAvance() > 100) {
-            throw new RuntimeException("Le taux d'avance doit être compris entre 0 et 100");
-        }
-        
-        if (dto.duree() <= 0) {
-            throw new RuntimeException("La durée doit être positive");
-        }
-        
-        if (dto.decompteTotal() <= 0) {
-            throw new RuntimeException("Le décompte total doit être positif");
-        }
-        
-        if (dto.decompteAvance() < 0) {
-            throw new RuntimeException("Le décompte avance ne peut pas être négatif");
-        }
-        
-        if (dto.decompteRelicat() < 0) {
-            throw new RuntimeException("Le décompte reliquat ne peut pas être négatif");
-        }
-        
-        if (dto.decompteAvance() + dto.decompteRelicat() != dto.decompteTotal()) {
-            throw new RuntimeException("La somme du décompte avance et reliquat doit égaler le décompte total");
-        }
-    }
     private OrdreMissionResponseDto mapToResponseDto(OrdreMission ordreMission) {
         return new OrdreMissionResponseDto(
                 ordreMission.getId(),
@@ -233,6 +174,7 @@ public class OrdreMissionService {
                 ordreMission.getDecompteTotal(),
                 ordreMission.getDecompteAvance(),
                 ordreMission.getDecompteRelicat(),
+                ordreMission.getStatut(),
                 ordreMission.getCreated_at(),
                 ordreMission.getUpdated_at()
         );

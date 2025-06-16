@@ -1,7 +1,9 @@
 package com.missions_back.missions_back.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,16 +50,32 @@ public class UserController {
         return ResponseEntity.ok(loginResponse);
     }
     // Nouveau endpoint pour récupérer les informations de l'utilisateur connecté
-    @GetMapping("/me")
-    public ResponseEntity<UserResponseDto> getCurrentUser(Authentication authentication) {
-        try {
-            String email = authentication.getName();
-            UserResponseDto user = userService.getUserByEmail(email);
-            return ResponseEntity.ok(user);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
+   @GetMapping("/me")
+public ResponseEntity<UserResponseDto> getCurrentUser(Authentication authentication) {
+    try {
+        String email;
+        
+        // Handle different types of principals
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            email = userDetails.getUsername();
+        } else {
+            email = authentication.getName();
         }
+        
+        System.out.println("Authenticated user email: " + email); // Debug log
+        
+        UserResponseDto user = userService.getUserByEmail(email);
+        return ResponseEntity.ok(user);
+    } catch (EntityNotFoundException e) {
+        System.err.println("User not found for email: " + authentication.getName());
+        return ResponseEntity.notFound().build();
+    } catch (Exception e) {
+        System.err.println("Error in getCurrentUser: " + e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
+}
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.delete(id);

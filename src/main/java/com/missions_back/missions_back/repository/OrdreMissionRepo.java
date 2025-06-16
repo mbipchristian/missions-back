@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.missions_back.missions_back.model.OrdreMission;
+import com.missions_back.missions_back.model.OrdreMissionStatut;
 
 @Repository
 public interface OrdreMissionRepo extends JpaRepository<OrdreMission, Long> {
@@ -39,4 +40,18 @@ public interface OrdreMissionRepo extends JpaRepository<OrdreMission, Long> {
     
     @Query("SELECT SUM(om.duree) FROM OrdreMission om WHERE om.user.id = :userId AND om.actif = true")
     Long sumDureeByUserId(@Param("userId") Long userId);
+    
+    // Nouvelles méthodes utilisées dans OrdreMissionService
+    List<OrdreMission> findByStatut(OrdreMissionStatut statut);
+    
+    List<OrdreMission> findByStatutIn(List<OrdreMissionStatut> statuts);
+    
+    // In your repository interface
+List<OrdreMission> findByUserIdAndStatutNot(Long userId, OrdreMissionStatut statut);
+    
+    @Query("SELECT om FROM OrdreMission om WHERE om.statut = :statut AND om.dateDebut <= :date AND om.actif = true")
+    List<OrdreMission> findByStatutAndDateDebutLessThanEqual(@Param("statut") OrdreMissionStatut statut, @Param("date") Date date);
+    
+    @Query("SELECT om FROM OrdreMission om WHERE om.statut = :statut AND om.dateFin <= :date AND om.actif = true")
+    List<OrdreMission> findByStatutAndDateFinLessThanEqual(@Param("statut") OrdreMissionStatut statut, @Param("date") Date date);
 }

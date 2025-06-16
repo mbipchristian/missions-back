@@ -3,6 +3,8 @@ package com.missions_back.missions_back.dto;
 import java.time.LocalDateTime;
 import java.util.Date;
 
+import com.missions_back.missions_back.model.OrdreMissionStatut;
+
 public record OrdreMissionResponseDto(
     Long id,
     String reference,
@@ -11,13 +13,14 @@ public record OrdreMissionResponseDto(
     String devise,
     Date dateDebut,
     Date dateFin,
-    Long durée,
+    Long duree,
     Long tauxAvance,
     Long decompteTotal,
     Long decompteAvance,
     Long decompteRelicat,
-    LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    OrdreMissionStatut libelle,
+    LocalDateTime created_at,
+    LocalDateTime updated_at
 ) {
     
 }

@@ -139,6 +139,7 @@ public class DataInitializer {
         user.setFonction(userDto.fonction());
         user.setQuotaAnnuel(userDto.quotaAnnuel());
         user.setRole(optionalRole.get());
+        user.setRang(optionalRang.get());
 
         userRepo.save(user);
         logger.info("Created admin user with role ADMIN, fonction 'Sous Directeur' and rang 'DG'");

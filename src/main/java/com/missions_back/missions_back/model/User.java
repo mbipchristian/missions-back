@@ -163,13 +163,23 @@ public class User implements UserDetails {
 
     public Role getRole() {
     return role;
-}
+    }
 
-public User setRole(Role role) {
-    this.role = role;
+    public User setRole(Role role) {
+        this.role = role;
 
-    return this;
-}
+        return this;
+    }
+
+    public Rang getRang() {
+    return rang;
+    }
+
+    public User setRang(Rang rang) {
+        this.rang = rang;
+
+        return this;
+    }
 //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
 
     @ManyToOne
@@ -178,4 +188,8 @@ public User setRole(Role role) {
     
     @ManyToMany(mappedBy = "users")
     private List<Mandat> mandats;
+
+    @ManyToOne
+    @JoinColumn(name = "rang_id", referencedColumnName = "id", nullable = false)
+    private Rang rang;
 }

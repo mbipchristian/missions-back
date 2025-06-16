@@ -2,6 +2,7 @@ package com.missions_back.missions_back.model;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -59,6 +60,22 @@ public class OrdreMission {
     @Column(nullable = false)
     private Long decompteRelicat;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrdreMissionStatut statut = OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF;
+
+    @Column
+    private Long confirmeParUserId;
+
+    @Column
+    private LocalDateTime dateConfirmation;
+
+    @Column
+    private LocalDateTime dateSoumission;
+
+    @Column
+    private boolean pieceJointeAjoutee = false;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime created_at;
@@ -73,8 +90,6 @@ public class OrdreMission {
     @Column
     private boolean actif = true;
 
-    //------------------------------------RELATIONS AVEC LES AUTRES TABLES--------------------------
-
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
@@ -82,4 +97,7 @@ public class OrdreMission {
     @ManyToOne
     @JoinColumn(name = "mandat_id")
     private Mandat mandat;
+
+    @OneToMany(mappedBy = "ordreMission", cascade = CascadeType.ALL)
+    private List<PieceJointe> piecesJointes;
 }

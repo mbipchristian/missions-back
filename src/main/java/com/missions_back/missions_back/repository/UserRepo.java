@@ -12,4 +12,6 @@ public interface UserRepo extends JpaRepository<User, Long>{
     Optional<User> findByUsername(String username);
     List<User> findByActifTrue();
     Optional<User> findByMatricule (String matricule);
+    boolean existsById(Long id);
+
 }
