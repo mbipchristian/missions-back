@@ -21,8 +21,8 @@ public class PieceJointeController {
     @Autowired
     private PieceJointeService pieceJointeService;
 
-    // Créer une nouvelle pièce jointe
-    @PostMapping
+    // ajouter une nouvelle pièce jointe
+    @PostMapping("/add")
     public ResponseEntity<PieceJointeResponseDto> creerPieceJointe(@Valid @RequestBody PieceJointeDto pieceJointeDto) {
         try {
             PieceJointeResponseDto pieceJointeCreee = pieceJointeService.creerPieceJointe(pieceJointeDto);
@@ -33,7 +33,7 @@ public class PieceJointeController {
     }
 
     // Obtenir toutes les pièces jointes
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<PieceJointeResponseDto>> obtenirToutesPiecesJointes() {
         List<PieceJointeResponseDto> piecesJointes = pieceJointeService.obtenirToutesPiecesJointes();
         return new ResponseEntity<>(piecesJointes, HttpStatus.OK);

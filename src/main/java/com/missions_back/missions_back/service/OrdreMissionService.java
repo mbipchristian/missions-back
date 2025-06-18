@@ -30,6 +30,45 @@ public class OrdreMissionService {
         this.userRepo = userRepo;
         this.mandatRepo = mandatRepo;
     }
+    /**
+     * Récupérer tous les ordres de missions en attente de justificatif
+     */
+    public List<OrdreMissionResponseDto> getOrdresMissionEnAttenteJustificatif() {
+        List<OrdreMission> ordresMission = ordreMissionRepo.findByStatut(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
+        return ordresMission.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupérer tous les ordres de missions en attente d'exécution
+     */
+    public List<OrdreMissionResponseDto> getOrdresMissionEnAttenteExecution() {
+        List<OrdreMission> ordresMission = ordreMissionRepo.findByStatut(OrdreMissionStatut.EN_ATTENTE_EXECUTION);
+        return ordresMission.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupérer tous les ordres de missions en cours
+     */
+    public List<OrdreMissionResponseDto> getOrdresMissionEnCours() {
+        List<OrdreMission> ordresMission = ordreMissionRepo.findByStatut(OrdreMissionStatut.EN_COURS);
+        return ordresMission.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupérer tous les ordres de missions achevés
+     */
+    public List<OrdreMissionResponseDto> getOrdresMissionAcheves() {
+        List<OrdreMission> ordresMission = ordreMissionRepo.findByStatut(OrdreMissionStatut.ACHEVE);
+        return ordresMission.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public OrdreMissionResponseDto ajouterPieceJointeEtSoumettre(Long ordreMissionId, Long userId) {

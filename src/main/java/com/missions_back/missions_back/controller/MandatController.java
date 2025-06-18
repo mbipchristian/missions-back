@@ -28,6 +28,48 @@ public class MandatController {
     @Autowired
     private UserRepo userRepo;
 
+    /**
+     * Récupérer tous les mandats en attente d'exécution
+     */
+    @GetMapping("/en-attente-execution")
+    public ResponseEntity<?> getMandatsEnAttenteExecution() {
+        try {
+            List<MandatResponseDto> mandats = mandatService.getMandatsEnAttenteExecution();
+            return ResponseEntity.ok(mandats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Erreur lors de la récupération des mandats en attente d'exécution"));
+        }
+    }
+
+    /**
+     * Récupérer tous les mandats en cours
+     */
+    @GetMapping("/en-cours")
+    public ResponseEntity<?> getMandatsEnCours() {
+        try {
+            List<MandatResponseDto> mandats = mandatService.getMandatsEnCours();
+            return ResponseEntity.ok(mandats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Erreur lors de la récupération des mandats en cours"));
+        }
+    }
+
+    /**
+     * Récupérer tous les mandats achevés
+     */
+    @GetMapping("/acheves")
+    public ResponseEntity<?> getMandatsAcheves() {
+        try {
+            List<MandatResponseDto> mandats = mandatService.getMandatsAcheves();
+            return ResponseEntity.ok(mandats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Erreur lors de la récupération des mandats achevés"));
+        }
+    }
+
     @PostMapping("/create")
     public ResponseEntity<?> createMandat(@RequestBody MandatDto mandatDto, Authentication authentication) {
         try {

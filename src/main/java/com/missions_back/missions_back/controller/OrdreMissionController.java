@@ -32,6 +32,62 @@ public class OrdreMissionController {
     @Autowired
     private UserRepo userRepo;
 
+    /**
+     * Récupérer tous les ordres de missions en attente de justificatif
+     */
+    @GetMapping("/en-attente-justificatif")
+    public ResponseEntity<?> getOrdresEnAttenteJustificatif() {
+        try {
+            List<OrdreMissionResponseDto> ordres = ordreMissionService.getOrdresMissionEnAttenteJustificatif();
+            return ResponseEntity.ok(ordres);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Erreur lors de la récupération des ordres en attente de justificatif"));
+        }
+    }
+
+    /**
+     * Récupérer tous les ordres de missions en attente d'exécution
+     */
+    @GetMapping("/en-attente-execution")
+    public ResponseEntity<?> getOrdresEnAttenteExecution() {
+        try {
+            List<OrdreMissionResponseDto> ordres = ordreMissionService.getOrdresMissionEnAttenteExecution();
+            return ResponseEntity.ok(ordres);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Erreur lors de la récupération des ordres en attente d'exécution"));
+        }
+    }
+
+    /**
+     * Récupérer tous les ordres de missions en cours
+     */
+    @GetMapping("/en-cours")
+    public ResponseEntity<?> getOrdresEnCours() {
+        try {
+            List<OrdreMissionResponseDto> ordres = ordreMissionService.getOrdresMissionEnCours();
+            return ResponseEntity.ok(ordres);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Erreur lors de la récupération des ordres en cours"));
+        }
+    }
+
+    /**
+     * Récupérer tous les ordres de missions achevés
+     */
+    @GetMapping("/acheves")
+    public ResponseEntity<?> getOrdresAcheves() {
+        try {
+            List<OrdreMissionResponseDto> ordres = ordreMissionService.getOrdresMissionAcheves();
+            return ResponseEntity.ok(ordres);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Erreur lors de la récupération des ordres achevés"));
+        }
+    }
+
     @PostMapping("/{id}/ajouter-piece-jointe")
     public ResponseEntity<?> ajouterPieceJointeEtSoumettre(@PathVariable Long id, Authentication authentication) {
         try {

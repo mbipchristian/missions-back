@@ -54,7 +54,36 @@ public class MandatService {
         this.ordreMissionService = ordreMissionService;
     }
 
-    // Extrait de la méthode createMandat dans MandatService.java
+
+    /**
+     * Récupérer tous les mandats en attente d'exécution
+     */
+    public List<MandatResponseDto> getMandatsEnAttenteExecution() {
+        List<Mandat> mandats = mandatRepo.findByStatutAndActifTrue(MandatStatut.EN_ATTENTE_EXECUTION);
+        return mandats.stream()
+                .map(this::convertToMandatResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupérer tous les mandats en cours
+     */
+    public List<MandatResponseDto> getMandatsEnCours() {
+        List<Mandat> mandats = mandatRepo.findByStatutAndActifTrue(MandatStatut.EN_COURS);
+        return mandats.stream()
+                .map(this::convertToMandatResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupérer tous les mandats achevés
+     */
+    public List<MandatResponseDto> getMandatsAcheves() {
+        List<Mandat> mandats = mandatRepo.findByStatutAndActifTrue(MandatStatut.ACHEVE);
+        return mandats.stream()
+                .map(this::convertToMandatResponseDto)
+                .collect(Collectors.toList());
+    }
 
 @Transactional
 public MandatResponseDto createMandat(MandatDto mandatDto, Long createdByUserId) {
