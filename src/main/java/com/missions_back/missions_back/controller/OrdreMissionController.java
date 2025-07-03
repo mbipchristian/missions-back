@@ -1,6 +1,7 @@
 package com.missions_back.missions_back.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -10,15 +11,22 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.missions_back.missions_back.dto.OrdreMissionResponseDto;
+import com.missions_back.missions_back.dto.OrdreMissionUpdateDto;
 import com.missions_back.missions_back.model.User;
 import com.missions_back.missions_back.repository.UserRepo;
 import com.missions_back.missions_back.service.OrdreMissionService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.persistence.EntityNotFoundException;
+import io.swagger.v3.oas.annotations.Parameter;
 
 @RestController
 @RequestMapping("/auth/ordres-mission")
@@ -88,11 +96,25 @@ public class OrdreMissionController {
         }
     }
 
-    @PostMapping("/{id}/ajouter-piece-jointe")
-    public ResponseEntity<?> ajouterPieceJointeEtSoumettre(@PathVariable Long id, Authentication authentication) {
+    // @PostMapping("/{id}/ajouter-piece-jointe")
+    // public ResponseEntity<?> ajouterPieceJointeEtSoumettre(@PathVariable Long id, Authentication authentication) {
+    //     try {
+    //         Long userId = getUserIdFromAuthentication(authentication);
+    //         OrdreMissionResponseDto ordre = ordreMissionService.ajouterPieceJointeEtSoumettre(id, userId);
+    //         return ResponseEntity.ok(ordre);
+    //     } catch (IllegalArgumentException e) {
+    //         return ResponseEntity.status(HttpStatus.FORBIDDEN)
+    //                 .body(new ErrorResponse(e.getMessage()));
+    //     } catch (EntityNotFoundException e) {
+    //         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+    //                 .body(new ErrorResponse(e.getMessage()));
+    //     }
+    // }
+
+    @PostMapping("/{id}/confirmer")
+    public ResponseEntity<?> confirmerOrdreMission(@PathVariable Long id, Authentication authentication) {
         try {
-            Long userId = getUserIdFromAuthentication(authentication);
-            OrdreMissionResponseDto ordre = ordreMissionService.ajouterPieceJointeEtSoumettre(id, userId);
+            OrdreMissionResponseDto ordre = ordreMissionService.confirmerOrdreMission(id, authentication);
             return ResponseEntity.ok(ordre);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -103,20 +125,62 @@ public class OrdreMissionController {
         }
     }
 
-    @PostMapping("/{id}/confirmer")
-    public ResponseEntity<?> confirmerOrdreMission(@PathVariable Long id, Authentication authentication) {
+    /**
+     * Mettre à jour un ordre de mission
+     */
+    @PutMapping("/{id}/update")
+    @Operation(summary = "Mettre à jour un ordre de mission")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Ordre de mission mis à jour avec succès"),
+        @ApiResponse(responseCode = "404", description = "Ordre de mission non trouvé"),
+        @ApiResponse(responseCode = "400", description = "Données de mise à jour invalides"),
+        @ApiResponse(responseCode = "403", description = "Autorisation insuffisante")
+    })
+    public ResponseEntity<?> updateOrdreMission(
+            @Parameter(description = "ID de l'ordre de mission") @PathVariable Long id,
+            @RequestBody OrdreMissionUpdateDto updateDto,
+            Authentication authentication) {
         try {
-            Long userId = getUserIdFromAuthentication(authentication);
-            OrdreMissionResponseDto ordre = ordreMissionService.confirmerOrdreMission(id, userId);
-            return ResponseEntity.ok(ordre);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorResponse(e.getMessage()));
+            OrdreMissionResponseDto updatedOrdre = ordreMissionService.updateOrdreMission(id, updateDto, authentication);
+            return ResponseEntity.ok(updatedOrdre);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(Map.of("error", "Ordre de mission non trouvé", "message", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Autorisation refusée", "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur interne", "message", "Une erreur est survenue lors de la mise à jour"));
         }
     }
+
+    /**
+     * Télécharger le PDF d'un ordre de mission
+     */
+    @GetMapping("/{id}/pdf")
+    @Operation(summary = "Télécharger le PDF d'un ordre de mission")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "PDF généré et téléchargé avec succès"),
+        @ApiResponse(responseCode = "404", description = "Ordre de mission non trouvé"),
+        @ApiResponse(responseCode = "500", description = "Erreur lors de la génération du PDF")
+    })
+    public ResponseEntity<?> telechargerPdf(
+            @Parameter(description = "ID de l'ordre de mission") @PathVariable Long id) {
+        try {
+            return ordreMissionService.telechargerPdf(id);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Ordre de mission non trouvé", "message", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur lors de la génération du PDF", "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur interne", "message", "Une erreur inattendue est survenue"));
+        }
+    }
+
 
     @GetMapping("/en-attente-confirmation")
     public ResponseEntity<List<OrdreMissionResponseDto>> getOrdresEnAttenteConfirmation() {

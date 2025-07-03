@@ -18,9 +18,10 @@ public record OrdreMissionResponseDto(
     Long decompteTotal,
     Long decompteAvance,
     Long decompteRelicat,
-    OrdreMissionStatut libelle,
+    OrdreMissionStatut statut,
     LocalDateTime created_at,
-    LocalDateTime updated_at
+    LocalDateTime updated_at,
+    LocalDateTime confirmele
 ) {
     
 }

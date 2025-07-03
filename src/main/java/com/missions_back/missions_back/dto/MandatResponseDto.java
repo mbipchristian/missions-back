@@ -22,6 +22,8 @@ public record MandatResponseDto(
     List<RessourceResponseDto> ressources,
     RapportResponseDto rapport,
     String createdBy,
+    Long confirmePar,
+    LocalDateTime confirmele,
     Integer usersCount,
     Integer villesCount,
     Integer ressourcesCount

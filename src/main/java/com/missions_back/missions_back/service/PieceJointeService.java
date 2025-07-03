@@ -1,5 +1,14 @@
 package com.missions_back.missions_back.service;
 
+// Imports nécessaires à ajouter
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +22,7 @@ import com.missions_back.missions_back.dto.PieceJointeDto;
 import com.missions_back.missions_back.dto.PieceJointeResponseDto;
 import com.missions_back.missions_back.model.Mandat;
 import com.missions_back.missions_back.model.OrdreMission;
+import com.missions_back.missions_back.model.OrdreMissionStatut;
 import com.missions_back.missions_back.model.PieceJointe;
 import com.missions_back.missions_back.model.Rapport;
 import com.missions_back.missions_back.model.User;
@@ -41,50 +51,70 @@ public class PieceJointeService {
     @Autowired
     private RapportRepo rapportRepository;
 
-    // Créer une pièce jointe
-    public PieceJointeResponseDto creerPieceJointe(PieceJointeDto pieceJointeDto) {
-        // Vérifier que l'utilisateur existe
-        User user = userRepository.findById(pieceJointeDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-
-        // Vérifier qu'au moins une association existe
-        if (pieceJointeDto.getMandatId() == null && 
-            pieceJointeDto.getOrdreMissionId() == null && 
-            pieceJointeDto.getRapportId() == null) {
-            throw new RuntimeException("La pièce jointe doit être associée à au moins un élément (mandat, ordre de mission ou rapport)");
-        }
-
-        PieceJointe pieceJointe = new PieceJointe();
-        pieceJointe.setNom(pieceJointeDto.getNom());
-        pieceJointe.setNomOriginal(pieceJointeDto.getNomOriginal());
-        pieceJointe.setCheminFichier(pieceJointeDto.getCheminFichier());
-        pieceJointe.setTypeMime(pieceJointeDto.getTypeMime());
-        pieceJointe.setTaille(pieceJointeDto.getTaille());
-        pieceJointe.setDescription(pieceJointeDto.getDescription());
-        pieceJointe.setUser(user);
-
-        // Associer aux entités si les IDs sont fournis
-        if (pieceJointeDto.getMandatId() != null) {
-            Mandat mandat = mandatRepository.findById(pieceJointeDto.getMandatId())
-                    .orElseThrow(() -> new RuntimeException("Mandat non trouvé"));
-            pieceJointe.setMandat(mandat);
-        }
-
-        if (pieceJointeDto.getOrdreMissionId() != null) {
-            OrdreMission ordreMission = ordreMissionRepository.findById(pieceJointeDto.getOrdreMissionId())
-                    .orElseThrow(() -> new RuntimeException("Ordre de mission non trouvé"));
-            pieceJointe.setOrdreMission(ordreMission);
-        }
-
-        if (pieceJointeDto.getRapportId() != null) {
-            Rapport rapport = rapportRepository.findById(pieceJointeDto.getRapportId())
-                    .orElseThrow(() -> new RuntimeException("Rapport non trouvé"));
-            pieceJointe.setRapport(rapport);
-        }
-
-        PieceJointe pieceJointeSauvegardee = pieceJointeRepository.save(pieceJointe);
-        return convertirEnResponseDto(pieceJointeSauvegardee);
+    public PieceJointeResponseDto uploadPieceJointe(MultipartFile file, Long userId, 
+        Long mandatId, Long ordreMissionId, Long rapportId, String description) throws IOException {
+    
+    // Vérifier que le fichier n'est pas vide
+    if (file.isEmpty()) {
+        throw new RuntimeException("Le fichier ne peut pas être vide");
     }
+    
+    // Vérifier que l'utilisateur existe
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+    
+    // Vérifier qu'au moins une association existe
+    if (mandatId == null && ordreMissionId == null && rapportId == null) {
+        throw new RuntimeException("La pièce jointe doit être associée à au moins un élément");
+    }
+    
+    // Générer un nom unique pour le fichier
+    String nomFichier = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+    
+    // Définir le chemin de stockage
+    String cheminStockage = "uploads/" + nomFichier;
+    
+    // Sauvegarder le fichier physiquement
+    Path cheminFichier = Paths.get(cheminStockage);
+    Files.createDirectories(cheminFichier.getParent());
+    Files.copy(file.getInputStream(), cheminFichier, StandardCopyOption.REPLACE_EXISTING);
+    
+    // Créer l'entité PieceJointe
+    PieceJointe pieceJointe = new PieceJointe();
+    pieceJointe.setNom(nomFichier);
+    pieceJointe.setNomOriginal(file.getOriginalFilename());
+    pieceJointe.setCheminFichier(cheminStockage);
+    pieceJointe.setTypeMime(file.getContentType());
+    pieceJointe.setTaille(file.getSize());
+    pieceJointe.setDescription(description);
+    pieceJointe.setUser(user);
+    
+    // Associer aux entités si les IDs sont fournis
+    if (mandatId != null) {
+        Mandat mandat = mandatRepository.findById(mandatId)
+                .orElseThrow(() -> new RuntimeException("Mandat non trouvé"));
+        pieceJointe.setMandat(mandat);
+    }
+    
+    if (ordreMissionId != null) {
+        OrdreMission ordreMission = ordreMissionRepository.findById(ordreMissionId)
+                .orElseThrow(() -> new RuntimeException("Ordre de mission non trouvé"));
+        pieceJointe.setOrdreMission(ordreMission);
+        // MISE À JOUR DU STATUT : Changer le statut en "EN_ATTENTE_CONFIRMATION"
+        ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_CONFIRMATION);
+        ordreMission.setUpdated_at(LocalDateTime.now());
+        ordreMissionRepository.save(ordreMission);
+    }
+    
+    if (rapportId != null) {
+        Rapport rapport = rapportRepository.findById(rapportId)
+                .orElseThrow(() -> new RuntimeException("Rapport non trouvé"));
+        pieceJointe.setRapport(rapport);
+    }
+    
+    PieceJointe pieceJointeSauvegardee = pieceJointeRepository.save(pieceJointe);
+    return convertirEnResponseDto(pieceJointeSauvegardee);
+}
 
     // Obtenir toutes les pièces jointes
     public List<PieceJointeResponseDto> obtenirToutesPiecesJointes() {

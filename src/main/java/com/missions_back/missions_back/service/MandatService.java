@@ -1,17 +1,26 @@
 package com.missions_back.missions_back.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.missions_back.missions_back.dto.MandatAvecPieceJointeResponseDto;
 import com.missions_back.missions_back.dto.MandatDto;
 import com.missions_back.missions_back.dto.MandatResponseDto;
+import com.missions_back.missions_back.dto.PieceJointeResponseDto;
 import com.missions_back.missions_back.dto.RapportResponseDto;
 import com.missions_back.missions_back.dto.RessourceResponseDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
@@ -21,6 +30,7 @@ import com.missions_back.missions_back.model.Mandat;
 import com.missions_back.missions_back.model.MandatStatut;
 import com.missions_back.missions_back.model.OrdreMission;
 import com.missions_back.missions_back.model.OrdreMissionStatut;
+import com.missions_back.missions_back.model.PieceJointe;
 import com.missions_back.missions_back.model.Rapport;
 import com.missions_back.missions_back.model.Ressource;
 import com.missions_back.missions_back.model.RoleEnum;
@@ -28,6 +38,7 @@ import com.missions_back.missions_back.model.User;
 import com.missions_back.missions_back.model.Ville;
 import com.missions_back.missions_back.repository.MandatRepo;
 import com.missions_back.missions_back.repository.OrdreMissionRepo;
+import com.missions_back.missions_back.repository.PieceJointeRepository;
 import com.missions_back.missions_back.repository.UserRepo;
 import com.missions_back.missions_back.repository.VilleRepo;
 import com.missions_back.missions_back.repository.RessourceRepo;
@@ -42,16 +53,20 @@ public class MandatService {
     private final RessourceRepo ressourceRepo;
     private final OrdreMissionRepo ordreMissionRepo;
     private final OrdreMissionService ordreMissionService;
+    private final PieceJointeRepository pieceJointeRepository;
+    private final PieceJointeService pieceJointeService;
 
     public MandatService(MandatRepo mandatRepo, UserRepo userRepo, VilleRepo villeRepo,
                         RessourceRepo ressourceRepo, OrdreMissionRepo ordreMissionRepo, 
-                        OrdreMissionService ordreMissionService) {
+                        OrdreMissionService ordreMissionService, PieceJointeRepository pieceJointeRepository, PieceJointeService pieceJointeService) {
         this.mandatRepo = mandatRepo;
         this.userRepo = userRepo;
         this.villeRepo = villeRepo;
         this.ressourceRepo = ressourceRepo;
         this.ordreMissionRepo = ordreMissionRepo;
         this.ordreMissionService = ordreMissionService;
+        this.pieceJointeRepository = pieceJointeRepository;
+        this.pieceJointeService = pieceJointeService;
     }
 
 
@@ -141,6 +156,28 @@ public MandatResponseDto createMandat(MandatDto mandatDto, Long createdByUserId)
     Mandat createdMandat = mandatRepo.save(mandat);
     return convertToMandatResponseDto(createdMandat);
 }
+
+
+// Version alternative avec retour des deux objets
+// @Transactional
+// public MandatAvecPieceJointeResponseDto enregistrerMandatAvecPieceJointe(MandatDto mandatDto, 
+//         Long createdByUserId, MultipartFile file, String description) throws IOException {
+    
+//     // 1. Créer le mandat (même logique que ci-dessus)
+//     MandatResponseDto mandatResponse = enregistrerMandat(mandatDto, createdByUserId, file, description);
+    
+//     // 2. Si une pièce jointe a été ajoutée, récupérer ses informations
+//     PieceJointeResponseDto pieceJointeResponse = null;
+//     if (file != null && !file.isEmpty()) {
+//         // Récupérer la pièce jointe associée au mandat créé
+//         Optional<PieceJointe> pieceJointe = pieceJointeRepository.findByMandatId(mandatResponse.id());
+//         if (pieceJointe.isPresent()) {
+//             pieceJointeResponse = pieceJointeService.convertirEnResponseDto(pieceJointe.get());
+//         }
+//     }
+    
+//     return new MandatAvecPieceJointeResponseDto(mandatResponse, pieceJointeResponse);
+// }
     @Transactional
 public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentication) {
     // Extraire l'utilisateur depuis le token JWT
@@ -148,12 +185,6 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
     User user = userRepo.findByEmail(userEmail)
         .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
     
-    // Vérifier que l'utilisateur a les droits
-    // if (!user.getRole().equals(RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES) && 
-    //     !user.getRole().equals(RoleEnum.ADMIN)) {
-    //     throw new IllegalArgumentException("Seul le directeur des ressources humaines peut confirmer un mandat");
-    // }
-
     Mandat mandat = mandatRepo.findById(mandatId)
         .orElseThrow(() -> new EntityNotFoundException("Mandat non trouvé"));
 
@@ -164,6 +195,7 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
     // Confirmer le mandat
     mandat.setStatut(MandatStatut.EN_ATTENTE_EXECUTION);
     mandat.setConfirmeParUserId(user.getId()); // Utiliser l'ID de l'utilisateur authentifié
+    
     mandat.setDateConfirmation(LocalDateTime.now());
     
     Mandat confirmedMandat = mandatRepo.save(mandat);
@@ -207,7 +239,7 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
             ordreMission.setReference(reference);
             ordreMission.setObjectif(mandat.getObjectif());
             ordreMission.setModePaiement("VIREMENT"); // Valeur par défaut
-            ordreMission.setDevise("XAF"); // Valeur par défaut  
+            ordreMission.setDevise("FCFA"); // Valeur par défaut  
             ordreMission.setTauxAvance(50L); // Valeur par défaut
             ordreMission.setDateDebut(mandat.getDateDebut());
             ordreMission.setDateFin(mandat.getDateFin());
@@ -344,6 +376,8 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
             ressourceDtos,
             rapportDto,
             createdBy,
+            mandat.getConfirmeParUserId(),
+            mandat.getDateConfirmation(),
             userDtos.size(), // usersCount
             villeDtos.size(), // villesCount
             ressourceDtos.size() // ressourcesCount

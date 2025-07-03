@@ -2,10 +2,14 @@ package com.missions_back.missions_back.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
+import java.io.IOException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.missions_back.missions_back.dto.PieceJointeDto;
 import com.missions_back.missions_back.dto.PieceJointeResponseDto;
@@ -22,15 +26,26 @@ public class PieceJointeController {
     private PieceJointeService pieceJointeService;
 
     // ajouter une nouvelle pièce jointe
-    @PostMapping("/add")
-    public ResponseEntity<PieceJointeResponseDto> creerPieceJointe(@Valid @RequestBody PieceJointeDto pieceJointeDto) {
-        try {
-            PieceJointeResponseDto pieceJointeCreee = pieceJointeService.creerPieceJointe(pieceJointeDto);
-            return new ResponseEntity<>(pieceJointeCreee, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-        }
+    // Contrôleur mis à jour pour gérer l'upload de fichiers
+@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+public ResponseEntity<PieceJointeResponseDto> uploadPieceJointe(
+        @RequestParam("file") MultipartFile file,
+        @RequestParam("userId") Long userId,
+        @RequestParam(value = "mandatId", required = false) Long mandatId,
+        @RequestParam(value = "ordreMissionId", required = false) Long ordreMissionId,
+        @RequestParam(value = "rapportId", required = false) Long rapportId,
+        @RequestParam(value = "description", required = false) String description) {
+    
+    try {
+        PieceJointeResponseDto pieceJointeCreee = pieceJointeService.uploadPieceJointe(
+            file, userId, mandatId, ordreMissionId, rapportId, description);
+        return new ResponseEntity<>(pieceJointeCreee, HttpStatus.CREATED);
+    } catch (RuntimeException e) {
+        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    } catch (IOException e) {
+        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+}
 
     // Obtenir toutes les pièces jointes
     @GetMapping("/all")
