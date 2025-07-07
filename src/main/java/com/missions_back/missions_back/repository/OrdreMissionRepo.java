@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import com.missions_back.missions_back.model.OrdreMission;
 import com.missions_back.missions_back.model.OrdreMissionStatut;
+import com.missions_back.missions_back.model.User;
 
 @Repository
 public interface OrdreMissionRepo extends JpaRepository<OrdreMission, Long> {
@@ -54,4 +55,16 @@ List<OrdreMission> findByUserIdAndStatutNot(Long userId, OrdreMissionStatut stat
     
     @Query("SELECT om FROM OrdreMission om WHERE om.statut = :statut AND om.dateFin <= :date AND om.actif = true")
     List<OrdreMission> findByStatutAndDateFinLessThanEqual(@Param("statut") OrdreMissionStatut statut, @Param("date") Date date);
+
+    /**
+     * Trouve l'ordre de mission le plus récent d'un utilisateur (par date de fin)
+     * qui est encore actif
+     */
+    Optional<OrdreMission> findTopByUserAndActifTrueOrderByDateFinDesc(User user);
+    
+    /**
+     * Alternative avec une requête personnalisée si nécessaire
+     */
+    @Query("SELECT om FROM OrdreMission om WHERE om.user = :user AND om.actif = true ORDER BY om.dateFin DESC")
+    Optional<OrdreMission> findLatestActiveOrdreMissionByUser(@Param("user") User user);
 }

@@ -46,17 +46,20 @@ import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
+import com.missions_back.missions_back.service.EmailService;
 
 @Service
 public class OrdreMissionService {
     private final OrdreMissionRepo ordreMissionRepo;
     private final UserRepo userRepo;
     private final MandatRepo mandatRepo;
+    private final EmailService emailService;
 
-    public OrdreMissionService(OrdreMissionRepo ordreMissionRepo, UserRepo userRepo, MandatRepo mandatRepo) {
+    public OrdreMissionService(OrdreMissionRepo ordreMissionRepo, UserRepo userRepo, MandatRepo mandatRepo, EmailService emailService) {
         this.ordreMissionRepo = ordreMissionRepo;
         this.userRepo = userRepo;
         this.mandatRepo = mandatRepo;
+        this.emailService = emailService;
     }
     /**
      * Récupérer tous les ordres de missions en attente de justificatif
@@ -168,6 +171,25 @@ public class OrdreMissionService {
         
         if (updateDto.getStatut() != null) {
             ordreMission.setStatut(updateDto.getStatut());
+            // Notifier l'utilisateur concerné
+            if (ordreMission.getUser() != null) {
+                emailService.sendEmail(
+                    ordreMission.getUser().getEmail(),
+                    "Changement de statut de l'ordre de mission",
+                    "L'ordre de mission " + ordreMission.getReference() + " est maintenant au statut : " + updateDto.getStatut().getLibelle()
+                );
+            }
+            // Notifier le DRH si le statut est EN_ATTENTE_CONFIRMATION
+            if (updateDto.getStatut() == com.missions_back.missions_back.model.OrdreMissionStatut.EN_ATTENTE_CONFIRMATION) {
+                var drhList = userRepo.findByRole_NameAndActifTrue(com.missions_back.missions_back.model.RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES);
+                if (!drhList.isEmpty()) {
+                    emailService.sendEmail(
+                        drhList.stream().map(User::getEmail).toList(),
+                        "Ordre de mission à confirmer",
+                        "Un ordre de mission (" + ordreMission.getReference() + ") attend votre confirmation."
+                    );
+                }
+            }
         }
 
         // Mettre à jour la date de modification

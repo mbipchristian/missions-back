@@ -27,4 +27,5 @@ public record MandatResponseDto(
     Integer usersCount,
     Integer villesCount,
     Integer ressourcesCount
+    
 ) {}

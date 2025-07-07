@@ -109,23 +109,23 @@ public ResponseEntity<?> confirmerMandat(@PathVariable Long id, Authentication a
     }
 }
 
-    @PostMapping("/{id}/rejeter")
-    public ResponseEntity<?> rejeterMandat(@PathVariable Long id, Authentication authentication) {
-        try {
-            Long userId = getUserIdFromAuthentication(authentication);
-            mandatService.rejeterMandat(id, userId);
-            return ResponseEntity.ok().body(new SuccessResponse("Mandat rejeté avec succès"));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorResponse(e.getMessage()));
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Erreur interne du serveur"));
-        }
-    }
+    // @PostMapping("/{id}/rejeter")
+    // public ResponseEntity<?> rejeterMandat(@PathVariable Long id, Authentication authentication) {
+    //     try {
+    //         Long userId = getUserIdFromAuthentication(authentication);
+    //         mandatService.rejeterMandat(id, userId);
+    //         return ResponseEntity.ok().body(new SuccessResponse("Mandat rejeté avec succès"));
+    //     } catch (IllegalArgumentException e) {
+    //         return ResponseEntity.status(HttpStatus.FORBIDDEN)
+    //                 .body(new ErrorResponse(e.getMessage()));
+    //     } catch (EntityNotFoundException e) {
+    //         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+    //                 .body(new ErrorResponse(e.getMessage()));
+    //     } catch (Exception e) {
+    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+    //                 .body(new ErrorResponse("Erreur interne du serveur"));
+    //     }
+    // }
 
     @GetMapping("/en-attente-confirmation")
     public ResponseEntity<?> getMandatsEnAttenteConfirmation() {

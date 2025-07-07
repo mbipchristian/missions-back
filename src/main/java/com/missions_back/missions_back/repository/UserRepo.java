@@ -13,5 +13,5 @@ public interface UserRepo extends JpaRepository<User, Long>{
     List<User> findByActifTrue();
     Optional<User> findByMatricule (String matricule);
     boolean existsById(Long id);
-
+    List<User> findByRole_NameAndActifTrue(com.missions_back.missions_back.model.RoleEnum roleName);
 }

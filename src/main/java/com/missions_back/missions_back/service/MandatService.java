@@ -5,9 +5,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -17,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.missions_back.missions_back.configuration.exception.ValidationResult;
 import com.missions_back.missions_back.dto.MandatAvecPieceJointeResponseDto;
 import com.missions_back.missions_back.dto.MandatDto;
 import com.missions_back.missions_back.dto.MandatResponseDto;
@@ -42,6 +49,7 @@ import com.missions_back.missions_back.repository.PieceJointeRepository;
 import com.missions_back.missions_back.repository.UserRepo;
 import com.missions_back.missions_back.repository.VilleRepo;
 import com.missions_back.missions_back.repository.RessourceRepo;
+import com.missions_back.missions_back.service.EmailService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -55,10 +63,11 @@ public class MandatService {
     private final OrdreMissionService ordreMissionService;
     private final PieceJointeRepository pieceJointeRepository;
     private final PieceJointeService pieceJointeService;
+    private final EmailService emailService;
 
     public MandatService(MandatRepo mandatRepo, UserRepo userRepo, VilleRepo villeRepo,
                         RessourceRepo ressourceRepo, OrdreMissionRepo ordreMissionRepo, 
-                        OrdreMissionService ordreMissionService, PieceJointeRepository pieceJointeRepository, PieceJointeService pieceJointeService) {
+                        OrdreMissionService ordreMissionService, PieceJointeRepository pieceJointeRepository, PieceJointeService pieceJointeService, EmailService emailService) {
         this.mandatRepo = mandatRepo;
         this.userRepo = userRepo;
         this.villeRepo = villeRepo;
@@ -67,6 +76,7 @@ public class MandatService {
         this.ordreMissionService = ordreMissionService;
         this.pieceJointeRepository = pieceJointeRepository;
         this.pieceJointeService = pieceJointeService;
+        this.emailService = emailService;
     }
 
 
@@ -154,31 +164,29 @@ public MandatResponseDto createMandat(MandatDto mandatDto, Long createdByUserId)
     }
 
     Mandat createdMandat = mandatRepo.save(mandat);
+    // Notifier tous les utilisateurs du mandat
+    if (mandat.getUsers() != null && !mandat.getUsers().isEmpty()) {
+        emailService.sendEmail(
+            mandat.getUsers().stream().map(User::getEmail).toList(),
+            "Nouveau mandat en attente de confirmation",
+            "Le mandat " + mandat.getReference() + " est en attente de confirmation."
+        );
+    }
+    // Notifier le DRH si le statut est EN_ATTENTE_CONFIRMATION
+    if (mandat.getStatut() == MandatStatut.EN_ATTENTE_CONFIRMATION) {
+        var drhList = userRepo.findByRole_NameAndActifTrue(com.missions_back.missions_back.model.RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES);
+        if (!drhList.isEmpty()) {
+            emailService.sendEmail(
+                drhList.stream().map(User::getEmail).toList(),
+                "Mandat à confirmer",
+                "Un mandat (" + mandat.getReference() + ") attend votre confirmation."
+            );
+        }
+    }
     return convertToMandatResponseDto(createdMandat);
 }
 
-
-// Version alternative avec retour des deux objets
-// @Transactional
-// public MandatAvecPieceJointeResponseDto enregistrerMandatAvecPieceJointe(MandatDto mandatDto, 
-//         Long createdByUserId, MultipartFile file, String description) throws IOException {
-    
-//     // 1. Créer le mandat (même logique que ci-dessus)
-//     MandatResponseDto mandatResponse = enregistrerMandat(mandatDto, createdByUserId, file, description);
-    
-//     // 2. Si une pièce jointe a été ajoutée, récupérer ses informations
-//     PieceJointeResponseDto pieceJointeResponse = null;
-//     if (file != null && !file.isEmpty()) {
-//         // Récupérer la pièce jointe associée au mandat créé
-//         Optional<PieceJointe> pieceJointe = pieceJointeRepository.findByMandatId(mandatResponse.id());
-//         if (pieceJointe.isPresent()) {
-//             pieceJointeResponse = pieceJointeService.convertirEnResponseDto(pieceJointe.get());
-//         }
-//     }
-    
-//     return new MandatAvecPieceJointeResponseDto(mandatResponse, pieceJointeResponse);
-// }
-    @Transactional
+@Transactional
 public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentication) {
     // Extraire l'utilisateur depuis le token JWT
     String userEmail = authentication.getName();
@@ -192,81 +200,136 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
         throw new IllegalArgumentException("Ce mandat ne peut pas être confirmé dans son état actuel");
     }
 
-    // Confirmer le mandat
-    mandat.setStatut(MandatStatut.EN_ATTENTE_EXECUTION);
-    mandat.setConfirmeParUserId(user.getId()); // Utiliser l'ID de l'utilisateur authentifié
+    // Valider les utilisateurs pour identifier les conformes et non conformes
+    ValidationResult validationResult = validerUtilisateursPourMandat(mandat);
     
+    // Le mandat change de statut dans tous les cas
+    mandat.setStatut(MandatStatut.EN_ATTENTE_EXECUTION);
+    mandat.setConfirmeParUserId(user.getId());
     mandat.setDateConfirmation(LocalDateTime.now());
     
     Mandat confirmedMandat = mandatRepo.save(mandat);
 
-    // Générer automatiquement les ordres de mission
-    genererOrdresMissionAutomatiquement(confirmedMandat);
+    // Générer automatiquement les ordres de mission seulement pour les utilisateurs conformes
+    if (!validationResult.getUtilisateursConformes().isEmpty()) {
+        genererOrdresMissionPourUtilisateurs(confirmedMandat, validationResult.getUtilisateursConformes());
+    }
 
-    return convertToMandatResponseDto(confirmedMandat);
-}
-    @Transactional
-    public void rejeterMandat(Long mandatId, Long userId) {
-        // Vérifier que l'utilisateur a les droits
-        User user = userRepo.findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
+    // Créer la réponse avec les informations de validation
+    MandatResponseDto response = convertToMandatResponseDto(confirmedMandat);
+    
+    // Ajouter des informations sur les utilisateurs non conformes si nécessaire
+    if (!validationResult.getUtilisateursNonConformes().isEmpty()) {
+        // Vous pouvez ajouter ces informations dans la réponse ou les logger
+        String messageNonConformes = "Utilisateurs non conformes : " + 
+            String.join(", ", validationResult.getUtilisateursNonConformes().stream()
+                .map(u -> u.getName() + " (" + validationResult.getErreursParUtilisateur().get(u.getId()) + ")")
+                .toList());
         
-        if (!user.getRole().equals(RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES) && 
-            !user.getRole().equals(RoleEnum.ADMIN)) {
-            throw new IllegalArgumentException("Seul le directeur des ressources humaines peut rejeter un mandat");
-        }
-
-        Mandat mandat = mandatRepo.findById(mandatId)
-            .orElseThrow(() -> new EntityNotFoundException("Mandat non trouvé"));
-
-        if (mandat.getStatut() != MandatStatut.EN_ATTENTE_CONFIRMATION) {
-            throw new IllegalArgumentException("Ce mandat ne peut pas être rejeté dans son état actuel");
-        }
-
-        // Rejeter le mandat (ou le supprimer selon votre logique métier)
-        mandat.setActif(false);
-        mandat.setUpdated_at(LocalDateTime.now());
-        mandatRepo.save(mandat);
+        // Si votre MandatResponseDto a un champ pour les messages, utilisez-le
+        // response.setMessageValidation(messageNonConformes);
+        
+        // Sinon, vous pouvez logger l'information
+        System.out.println("Mandat " + mandat.getReference() + " confirmé partiellement. " + messageNonConformes);
     }
 
-    @Transactional
-    private void genererOrdresMissionAutomatiquement(Mandat mandat) {
-        for (User user : mandat.getUsers()) {
-            OrdreMission ordreMission = new OrdreMission();
-            
-            // Générer une référence unique
-            String reference = "OM-" + mandat.getReference() + "-" + user.getMatricule();
-            ordreMission.setReference(reference);
-            ordreMission.setObjectif(mandat.getObjectif());
-            ordreMission.setModePaiement("VIREMENT"); // Valeur par défaut
-            ordreMission.setDevise("FCFA"); // Valeur par défaut  
-            ordreMission.setTauxAvance(50L); // Valeur par défaut
-            ordreMission.setDateDebut(mandat.getDateDebut());
-            ordreMission.setDateFin(mandat.getDateFin());
-            ordreMission.setDuree((long) mandat.getDuree());
-            
-            // Calculs financiers par défaut
-            Long decompteTotal = calculateDecompteTotal(user, mandat);
-            Long decompteAvance = decompteTotal * ordreMission.getTauxAvance() / 100;
-            Long decompteRelicat = decompteTotal - decompteAvance;
-            
-            ordreMission.setDecompteTotal(decompteTotal);
-            ordreMission.setDecompteAvance(decompteAvance);
-            ordreMission.setDecompteRelicat(decompteRelicat);
-            
-            ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
-            ordreMission.setUser(user);
-            ordreMission.setMandat(mandat);
-            ordreMission.setActif(true);
-            
-            ordreMissionRepo.save(ordreMission);
-            
-            // Mettre à jour le quota de l'utilisateur
-            user.setQuotaAnnuel(user.getQuotaAnnuel() + mandat.getDuree());
-            userRepo.save(user);
+    return response;
+}
+
+/**
+ * Valide tous les utilisateurs d'un mandat et sépare les conformes des non conformes
+ */
+private ValidationResult validerUtilisateursPourMandat(Mandat mandat) {
+    List<User> utilisateursConformes = new ArrayList<>();
+    List<User> utilisateursNonConformes = new ArrayList<>();
+    Map<Long, String> erreursParUtilisateur = new HashMap<>();
+    
+    for (User user : mandat.getUsers()) {
+        String erreur = validerUtilisateur(user, mandat);
+        
+        if (erreur == null) {
+            utilisateursConformes.add(user);
+        } else {
+            utilisateursNonConformes.add(user);
+            erreursParUtilisateur.put(user.getId(), erreur);
         }
     }
+    
+    return new ValidationResult(utilisateursConformes, utilisateursNonConformes, erreursParUtilisateur);
+}
 
+/**
+ * Valide un utilisateur spécifique pour un mandat
+ */
+private String validerUtilisateur(User user, Mandat mandat) {
+    // Vérification 1 : Ordre de mission en cours
+    Optional<OrdreMission> dernierOrdreMission = ordreMissionRepo
+        .findTopByUserAndActifTrueOrderByDateFinDesc(user);
+    
+    if (dernierOrdreMission.isPresent()) {
+        Date dateFinDernierOrdre = dernierOrdreMission.get().getDateFin();
+        Date dateDebutMandat = mandat.getDateDebut();
+        
+        // Convert to LocalDate for comparison
+        LocalDate finDernierOrdre = dateFinDernierOrdre.toInstant()
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate();
+        LocalDate debutMandat = dateDebutMandat.toInstant()
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate();
+        
+        if (finDernierOrdre.isAfter(debutMandat)) {
+            return "Ordre de mission en cours jusqu'au " + 
+                   finDernierOrdre.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        }
+    }
+    
+    // Vérification 2 : Quota annuel
+    Long quotaApresMandat = user.getQuotaAnnuel() + mandat.getDuree();
+    if (quotaApresMandat > 100) {
+        return "Dépassement du quota annuel (actuel: " + user.getQuotaAnnuel() + 
+               " jours, après mandat: " + quotaApresMandat + " jours)";
+    }
+    
+    return null; // Utilisateur conforme
+}
+@Transactional
+private void genererOrdresMissionPourUtilisateurs(Mandat mandat, List<User> utilisateursConformes) {
+    for (User user : utilisateursConformes) {
+        OrdreMission ordreMission = new OrdreMission();
+        
+        // Générer une référence unique
+        String reference = "OM-" + mandat.getReference() + "-" + user.getMatricule();
+        ordreMission.setReference(reference);
+        ordreMission.setObjectif(mandat.getObjectif());
+        ordreMission.setModePaiement("VIREMENT"); // Valeur par défaut
+        ordreMission.setDevise("FCFA"); // Valeur par défaut  
+        ordreMission.setTauxAvance(50L); // Valeur par défaut
+        ordreMission.setDateDebut(mandat.getDateDebut());
+        ordreMission.setDateFin(mandat.getDateFin());
+        ordreMission.setDuree((long) mandat.getDuree());
+        
+        // Calculs financiers par défaut
+        Long decompteTotal = calculateDecompteTotal(user, mandat);
+        Long decompteAvance = decompteTotal * ordreMission.getTauxAvance() / 100;
+        Long decompteRelicat = decompteTotal - decompteAvance;
+        
+        ordreMission.setDecompteTotal(decompteTotal);
+        ordreMission.setDecompteAvance(decompteAvance);
+        ordreMission.setDecompteRelicat(decompteRelicat);
+        
+        ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
+        ordreMission.setUser(user);
+        ordreMission.setMandat(mandat);
+        ordreMission.setActif(true);
+        
+        ordreMissionRepo.save(ordreMission);
+        
+        // Mettre à jour le quota de l'utilisateur
+        user.setQuotaAnnuel(user.getQuotaAnnuel() + mandat.getDuree());
+        userRepo.save(user);
+    }
+}
     private Long calculateDecompteTotal(User user, Mandat mandat) {
         Long fraisInterne = user.getRang().getFraisInterne().longValue();
     
