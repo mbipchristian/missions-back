@@ -1,12 +1,17 @@
 package com.missions_back.missions_back.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Map;
 
 import org.springframework.core.io.ClassPathResource;
 
@@ -199,6 +204,98 @@ public class OrdreMissionService {
         OrdreMission updatedOrdreMission = ordreMissionRepo.save(ordreMission);
         
         return mapToResponseDto(updatedOrdreMission);
+    }
+
+    /**
+     * Créer un nouvel ordre de mission pour un utilisateur et un mandat donnés
+     */
+    @Transactional
+    public OrdreMissionResponseDto creerOrdreMission(Mandat mandat, User missionUser, String reference, String objectif, String modePaiement, String devise, Long tauxAvance, Date dateDebut, Date dateFin, Long duree, Long decompteTotal, Long decompteAvance, Long decompteRelicat, Authentication authentication) {
+        // 2. Valider l'utilisateur
+        String validationError = validerUtilisateur(missionUser, mandat);
+        if (validationError != null) {
+            throw new IllegalArgumentException("Impossible de créer l'ordre de mission : " + validationError);
+        }
+        OrdreMission ordreMission = new OrdreMission();
+        ordreMission.setReference(reference);
+        ordreMission.setObjectif(objectif);
+        ordreMission.setModePaiement(modePaiement);
+        ordreMission.setDevise(devise);
+        ordreMission.setTauxAvance(tauxAvance);
+        ordreMission.setDateDebut(dateDebut);
+        ordreMission.setDateFin(dateFin);
+        ordreMission.setDuree(duree);
+
+        // Calculs financiers par défaut
+        decompteTotal = calculateDecompteTotal(missionUser, mandat);
+        decompteAvance = decompteTotal * ordreMission.getTauxAvance() / 100;
+        decompteRelicat = decompteTotal - decompteAvance;
+
+        ordreMission.setDecompteTotal(decompteTotal);
+        ordreMission.setDecompteAvance(decompteAvance);
+        ordreMission.setDecompteRelicat(decompteRelicat);
+        ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
+        ordreMission.setUser(missionUser);
+        ordreMission.setMandat(mandat);
+        ordreMission.setActif(true);
+        OrdreMission saved = ordreMissionRepo.save(ordreMission);
+        // Mettre à jour le quota de l'utilisateur
+        missionUser.setQuotaAnnuel(missionUser.getQuotaAnnuel() + mandat.getDuree());
+        userRepo.save(missionUser);
+        return mapToResponseDto(saved);
+    }
+    private Long calculateDecompteTotal(User user, Mandat mandat) {
+        Long fraisInterne = user.getRang().getFraisInterne().longValue();
+    
+        // Multiplier par la durée du mandat
+        return fraisInterne * mandat.getDuree();
+    }
+
+    private String validerUtilisateur(User user, Mandat mandat) {
+        // Vérification 1 : Ordre de mission en cours
+        Optional<OrdreMission> dernierOrdreMission = ordreMissionRepo
+            .findTopByUserAndActifTrueOrderByDateFinDesc(user);
+        
+        if (dernierOrdreMission.isPresent()) {
+            Date dateFinDernierOrdre = dernierOrdreMission.get().getDateFin();
+            Date dateDebutMandat = mandat.getDateDebut();
+            
+            // Convert to LocalDate for comparison
+            LocalDate finDernierOrdre = dateFinDernierOrdre.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+            LocalDate debutMandat = dateDebutMandat.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+            
+            if (finDernierOrdre.isAfter(debutMandat)) {
+                return "Ordre de mission en cours jusqu'au " + 
+                       finDernierOrdre.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            }
+        }
+        
+        // Vérification 2 : Quota annuel
+        Long quotaApresMandat = user.getQuotaAnnuel() + mandat.getDuree();
+        if (quotaApresMandat > 100) {
+            return "Dépassement du quota annuel (actuel: " + user.getQuotaAnnuel() + 
+                   " jours, après mandat: " + quotaApresMandat + " jours)";
+        }
+        
+        return null; // Utilisateur conforme
+    }
+
+    /**
+     * Calcule les décomptes pour un utilisateur et un mandat (sans créer l'ordre de mission)
+     */
+    public Map<String, Long> calculerDecomptes(User user, Mandat mandat, Long tauxAvance) {
+        Long decompteTotal = calculateDecompteTotal(user, mandat);
+        Long decompteAvance = decompteTotal * tauxAvance / 100;
+        Long decompteRelicat = decompteTotal - decompteAvance;
+        return Map.of(
+            "decompteTotal", decompteTotal,
+            "decompteAvance", decompteAvance,
+            "decompteRelicat", decompteRelicat
+        );
     }
 
     /**

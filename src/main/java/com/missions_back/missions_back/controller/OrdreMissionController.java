@@ -16,10 +16,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.missions_back.missions_back.dto.OrdreMissionDto;
 import com.missions_back.missions_back.dto.OrdreMissionResponseDto;
 import com.missions_back.missions_back.dto.OrdreMissionUpdateDto;
 import com.missions_back.missions_back.model.User;
+import com.missions_back.missions_back.model.Mandat;
 import com.missions_back.missions_back.repository.UserRepo;
+import com.missions_back.missions_back.repository.MandatRepo;
 import com.missions_back.missions_back.service.OrdreMissionService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +42,8 @@ public class OrdreMissionController {
     }
     @Autowired
     private UserRepo userRepo;
+    @Autowired
+    private MandatRepo mandatRepo;
 
     /**
      * Récupérer tous les ordres de missions en attente de justificatif
@@ -124,7 +129,6 @@ public class OrdreMissionController {
                     .body(new ErrorResponse(e.getMessage()));
         }
     }
-
     /**
      * Mettre à jour un ordre de mission
      */
@@ -260,6 +264,68 @@ public class OrdreMissionController {
             return ResponseEntity.ok(ordre);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/create")
+public ResponseEntity<?> creerOrdreMission(@RequestBody OrdreMissionDto dto, Authentication authentication) {
+    try {
+        // Récupérer le mandat
+        Mandat mandat = mandatRepo.findById(dto.mandatId())
+            .orElseThrow(() -> new EntityNotFoundException("Mandat non trouvé"));
+        
+        // Récupérer l'utilisateur sélectionné (pas l'utilisateur connecté)
+        User missionUser = userRepo.findById(dto.userId())
+            .orElseThrow(() -> new EntityNotFoundException("Utilisateur de mission non trouvé"));
+        
+        // Vérifier que l'utilisateur sélectionné fait partie du mandat
+        if (!mandat.getUsers().contains(missionUser)) {
+            throw new IllegalArgumentException("L'utilisateur sélectionné ne fait pas partie de ce mandat");
+        }
+        
+        // Appeler le service
+        var response = ordreMissionService.creerOrdreMission(
+            mandat,
+            missionUser, // Utiliser l'utilisateur sélectionné
+            dto.reference(),
+            dto.objectif(),
+            dto.modePaiement(),
+            dto.devise(),
+            dto.tauxAvance(),
+            dto.dateDebut(),
+            dto.dateFin(),
+            dto.duree(),
+            dto.decompteTotal(),
+            dto.decompteAvance(),
+            dto.decompteRelicat(),
+            authentication
+        );
+        return ResponseEntity.ok(response);
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    } catch (EntityNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+    } catch (Exception e) {
+        // Ajouter plus de détails pour le debugging
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(Map.of("message", "Erreur lors de la création de l'ordre de mission: " + e.getMessage()));
+    }
+}
+
+    @GetMapping("/calcul-decomptes")
+    public ResponseEntity<?> calculerDecomptes(Long mandatId, Long userId, Long tauxAvance) {
+        try {
+            var mandat = mandatRepo.findById(mandatId)
+                .orElseThrow(() -> new EntityNotFoundException("Mandat non trouvé"));
+            var user = userRepo.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
+            var result = ordreMissionService.calculerDecomptes(user, mandat, tauxAvance);
+            return ResponseEntity.ok(result);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Erreur lors du calcul des décomptes"));
         }
     }
 

@@ -201,7 +201,7 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
     }
 
     // Valider les utilisateurs pour identifier les conformes et non conformes
-    ValidationResult validationResult = validerUtilisateursPourMandat(mandat);
+    // ValidationResult validationResult = validerUtilisateursPourMandat(mandat);
     
     // Le mandat change de statut dans tous les cas
     mandat.setStatut(MandatStatut.EN_ATTENTE_EXECUTION);
@@ -211,27 +211,27 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
     Mandat confirmedMandat = mandatRepo.save(mandat);
 
     // Générer automatiquement les ordres de mission seulement pour les utilisateurs conformes
-    if (!validationResult.getUtilisateursConformes().isEmpty()) {
-        genererOrdresMissionPourUtilisateurs(confirmedMandat, validationResult.getUtilisateursConformes());
-    }
+    // if (!validationResult.getUtilisateursConformes().isEmpty()) {
+    //     genererOrdresMissionPourUtilisateurs(confirmedMandat, validationResult.getUtilisateursConformes());
+    // }
 
     // Créer la réponse avec les informations de validation
     MandatResponseDto response = convertToMandatResponseDto(confirmedMandat);
     
     // Ajouter des informations sur les utilisateurs non conformes si nécessaire
-    if (!validationResult.getUtilisateursNonConformes().isEmpty()) {
-        // Vous pouvez ajouter ces informations dans la réponse ou les logger
-        String messageNonConformes = "Utilisateurs non conformes : " + 
-            String.join(", ", validationResult.getUtilisateursNonConformes().stream()
-                .map(u -> u.getName() + " (" + validationResult.getErreursParUtilisateur().get(u.getId()) + ")")
-                .toList());
+    // if (!validationResult.getUtilisateursNonConformes().isEmpty()) {
+    //     // Vous pouvez ajouter ces informations dans la réponse ou les logger
+    //     String messageNonConformes = "Utilisateurs non conformes : " + 
+    //         String.join(", ", validationResult.getUtilisateursNonConformes().stream()
+    //             .map(u -> u.getName() + " (" + validationResult.getErreursParUtilisateur().get(u.getId()) + ")")
+    //             .toList());
         
-        // Si votre MandatResponseDto a un champ pour les messages, utilisez-le
-        // response.setMessageValidation(messageNonConformes);
+    //     // Si votre MandatResponseDto a un champ pour les messages, utilisez-le
+    //     // response.setMessageValidation(messageNonConformes);
         
-        // Sinon, vous pouvez logger l'information
-        System.out.println("Mandat " + mandat.getReference() + " confirmé partiellement. " + messageNonConformes);
-    }
+    //     // Sinon, vous pouvez logger l'information
+    //     System.out.println("Mandat " + mandat.getReference() + " confirmé partiellement. " + messageNonConformes);
+    // }
 
     return response;
 }
@@ -239,103 +239,103 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
 /**
  * Valide tous les utilisateurs d'un mandat et sépare les conformes des non conformes
  */
-private ValidationResult validerUtilisateursPourMandat(Mandat mandat) {
-    List<User> utilisateursConformes = new ArrayList<>();
-    List<User> utilisateursNonConformes = new ArrayList<>();
-    Map<Long, String> erreursParUtilisateur = new HashMap<>();
+// private ValidationResult validerUtilisateursPourMandat(Mandat mandat) {
+//     List<User> utilisateursConformes = new ArrayList<>();
+//     List<User> utilisateursNonConformes = new ArrayList<>();
+//     Map<Long, String> erreursParUtilisateur = new HashMap<>();
     
-    for (User user : mandat.getUsers()) {
-        String erreur = validerUtilisateur(user, mandat);
+//     for (User user : mandat.getUsers()) {
+//         String erreur = validerUtilisateur(user, mandat);
         
-        if (erreur == null) {
-            utilisateursConformes.add(user);
-        } else {
-            utilisateursNonConformes.add(user);
-            erreursParUtilisateur.put(user.getId(), erreur);
-        }
-    }
+//         if (erreur == null) {
+//             utilisateursConformes.add(user);
+//         } else {
+//             utilisateursNonConformes.add(user);
+//             erreursParUtilisateur.put(user.getId(), erreur);
+//         }
+//     }
     
-    return new ValidationResult(utilisateursConformes, utilisateursNonConformes, erreursParUtilisateur);
-}
+//     return new ValidationResult(utilisateursConformes, utilisateursNonConformes, erreursParUtilisateur);
+// }
 
-/**
- * Valide un utilisateur spécifique pour un mandat
- */
-private String validerUtilisateur(User user, Mandat mandat) {
-    // Vérification 1 : Ordre de mission en cours
-    Optional<OrdreMission> dernierOrdreMission = ordreMissionRepo
-        .findTopByUserAndActifTrueOrderByDateFinDesc(user);
+// /**
+//  * Valide un utilisateur spécifique pour un mandat
+//  */
+// private String validerUtilisateur(User user, Mandat mandat) {
+//     // Vérification 1 : Ordre de mission en cours
+//     Optional<OrdreMission> dernierOrdreMission = ordreMissionRepo
+//         .findTopByUserAndActifTrueOrderByDateFinDesc(user);
     
-    if (dernierOrdreMission.isPresent()) {
-        Date dateFinDernierOrdre = dernierOrdreMission.get().getDateFin();
-        Date dateDebutMandat = mandat.getDateDebut();
+//     if (dernierOrdreMission.isPresent()) {
+//         Date dateFinDernierOrdre = dernierOrdreMission.get().getDateFin();
+//         Date dateDebutMandat = mandat.getDateDebut();
         
-        // Convert to LocalDate for comparison
-        LocalDate finDernierOrdre = dateFinDernierOrdre.toInstant()
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate();
-        LocalDate debutMandat = dateDebutMandat.toInstant()
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate();
+//         // Convert to LocalDate for comparison
+//         LocalDate finDernierOrdre = dateFinDernierOrdre.toInstant()
+//             .atZone(ZoneId.systemDefault())
+//             .toLocalDate();
+//         LocalDate debutMandat = dateDebutMandat.toInstant()
+//             .atZone(ZoneId.systemDefault())
+//             .toLocalDate();
         
-        if (finDernierOrdre.isAfter(debutMandat)) {
-            return "Ordre de mission en cours jusqu'au " + 
-                   finDernierOrdre.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        }
-    }
+//         if (finDernierOrdre.isAfter(debutMandat)) {
+//             return "Ordre de mission en cours jusqu'au " + 
+//                    finDernierOrdre.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+//         }
+//     }
     
-    // Vérification 2 : Quota annuel
-    Long quotaApresMandat = user.getQuotaAnnuel() + mandat.getDuree();
-    if (quotaApresMandat > 100) {
-        return "Dépassement du quota annuel (actuel: " + user.getQuotaAnnuel() + 
-               " jours, après mandat: " + quotaApresMandat + " jours)";
-    }
+//     // Vérification 2 : Quota annuel
+//     Long quotaApresMandat = user.getQuotaAnnuel() + mandat.getDuree();
+//     if (quotaApresMandat > 100) {
+//         return "Dépassement du quota annuel (actuel: " + user.getQuotaAnnuel() + 
+//                " jours, après mandat: " + quotaApresMandat + " jours)";
+//     }
     
-    return null; // Utilisateur conforme
-}
-@Transactional
-private void genererOrdresMissionPourUtilisateurs(Mandat mandat, List<User> utilisateursConformes) {
-    for (User user : utilisateursConformes) {
-        OrdreMission ordreMission = new OrdreMission();
+//     return null; // Utilisateur conforme
+// }
+// @Transactional
+// private void genererOrdresMissionPourUtilisateurs(Mandat mandat, List<User> utilisateursConformes) {
+//     for (User user : utilisateursConformes) {
+//         OrdreMission ordreMission = new OrdreMission();
         
-        // Générer une référence unique
-        String reference = "OM-" + mandat.getReference() + "-" + user.getMatricule();
-        ordreMission.setReference(reference);
-        ordreMission.setObjectif(mandat.getObjectif());
-        ordreMission.setModePaiement("VIREMENT"); // Valeur par défaut
-        ordreMission.setDevise("FCFA"); // Valeur par défaut  
-        ordreMission.setTauxAvance(50L); // Valeur par défaut
-        ordreMission.setDateDebut(mandat.getDateDebut());
-        ordreMission.setDateFin(mandat.getDateFin());
-        ordreMission.setDuree((long) mandat.getDuree());
+//         // Générer une référence unique
+//         String reference = "OM-" + mandat.getReference() + "-" + user.getMatricule();
+//         ordreMission.setReference(reference);
+//         ordreMission.setObjectif(mandat.getObjectif());
+//         ordreMission.setModePaiement("VIREMENT"); // Valeur par défaut
+//         ordreMission.setDevise("FCFA"); // Valeur par défaut  
+//         ordreMission.setTauxAvance(50L); // Valeur par défaut
+//         ordreMission.setDateDebut(mandat.getDateDebut());
+//         ordreMission.setDateFin(mandat.getDateFin());
+//         ordreMission.setDuree((long) mandat.getDuree());
         
-        // Calculs financiers par défaut
-        Long decompteTotal = calculateDecompteTotal(user, mandat);
-        Long decompteAvance = decompteTotal * ordreMission.getTauxAvance() / 100;
-        Long decompteRelicat = decompteTotal - decompteAvance;
+//         // Calculs financiers par défaut
+//         Long decompteTotal = calculateDecompteTotal(user, mandat);
+//         Long decompteAvance = decompteTotal * ordreMission.getTauxAvance() / 100;
+//         Long decompteRelicat = decompteTotal - decompteAvance;
         
-        ordreMission.setDecompteTotal(decompteTotal);
-        ordreMission.setDecompteAvance(decompteAvance);
-        ordreMission.setDecompteRelicat(decompteRelicat);
+//         ordreMission.setDecompteTotal(decompteTotal);
+//         ordreMission.setDecompteAvance(decompteAvance);
+//         ordreMission.setDecompteRelicat(decompteRelicat);
         
-        ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
-        ordreMission.setUser(user);
-        ordreMission.setMandat(mandat);
-        ordreMission.setActif(true);
+//         ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
+//         ordreMission.setUser(user);
+//         ordreMission.setMandat(mandat);
+//         ordreMission.setActif(true);
         
-        ordreMissionRepo.save(ordreMission);
+//         ordreMissionRepo.save(ordreMission);
         
-        // Mettre à jour le quota de l'utilisateur
-        user.setQuotaAnnuel(user.getQuotaAnnuel() + mandat.getDuree());
-        userRepo.save(user);
-    }
-}
-    private Long calculateDecompteTotal(User user, Mandat mandat) {
-        Long fraisInterne = user.getRang().getFraisInterne().longValue();
+//         // Mettre à jour le quota de l'utilisateur
+//         user.setQuotaAnnuel(user.getQuotaAnnuel() + mandat.getDuree());
+//         userRepo.save(user);
+//     }
+// }
+//     private Long calculateDecompteTotal(User user, Mandat mandat) {
+//         Long fraisInterne = user.getRang().getFraisInterne().longValue();
     
-        // Multiplier par la durée du mandat
-        return fraisInterne * mandat.getDuree();
-    }
+//         // Multiplier par la durée du mandat
+//         return fraisInterne * mandat.getDuree();
+//     }
 
     public List<MandatResponseDto> getMandatsEnAttenteConfirmation() {
         List<Mandat> mandats = mandatRepo.findByStatutAndActifTrue(MandatStatut.EN_ATTENTE_CONFIRMATION);

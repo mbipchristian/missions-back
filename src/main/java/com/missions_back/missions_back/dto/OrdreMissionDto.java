@@ -14,7 +14,8 @@ public record OrdreMissionDto(
     Long decompteTotal,
     Long decompteAvance,
     Long decompteRelicat,
-    Long mandatId
+    Long mandatId,
+    Long userId
 ) {
     
 }
