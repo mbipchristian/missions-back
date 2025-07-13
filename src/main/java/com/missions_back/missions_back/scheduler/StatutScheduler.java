@@ -18,7 +18,7 @@ public class StatutScheduler {
     }
 
     // Exécution toutes les heures pour mettre à jour les statuts
-    @Scheduled(fixedRate = 3600000) // 1 heure = 3600000 ms
+    @Scheduled(cron = "0 */5 * * * *")   // Toutes les 5 minutes
     public void mettreAJourStatutsAutomatiquement() {
         try {
             mandatService.mettreAJourStatutsAutomatiquement();

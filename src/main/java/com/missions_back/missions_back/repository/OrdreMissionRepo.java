@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -67,4 +68,18 @@ List<OrdreMission> findByUserIdAndStatutNot(Long userId, OrdreMissionStatut stat
      */
     @Query("SELECT om FROM OrdreMission om WHERE om.user = :user AND om.actif = true ORDER BY om.dateFin DESC")
     Optional<OrdreMission> findLatestActiveOrdreMissionByUser(@Param("user") User user);
+
+    @Modifying
+    @Query("UPDATE OrdreMission o SET o.statut = :nouveauStatut WHERE o.statut = :ancienStatut AND o.dateDebut <= :maintenant")
+    int updateStatutByStatutAndDateDebutLessThanEqual(
+        @Param("nouveauStatut") OrdreMissionStatut nouveauStatut,
+        @Param("ancienStatut") OrdreMissionStatut ancienStatut,
+        @Param("maintenant") Date maintenant);
+
+    @Modifying
+    @Query("UPDATE OrdreMission o SET o.statut = :nouveauStatut WHERE o.statut = :ancienStatut AND o.dateFin <= :maintenant")
+    int updateStatutByStatutAndDateFinLessThanEqual(
+        @Param("nouveauStatut") OrdreMissionStatut nouveauStatut,
+        @Param("ancienStatut") OrdreMissionStatut ancienStatut,
+        @Param("maintenant") Date maintenant);
 }

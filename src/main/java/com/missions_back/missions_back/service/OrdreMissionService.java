@@ -212,7 +212,7 @@ public class OrdreMissionService {
     @Transactional
     public OrdreMissionResponseDto creerOrdreMission(Mandat mandat, User missionUser, String reference, String objectif, String modePaiement, String devise, Long tauxAvance, Date dateDebut, Date dateFin, Long duree, Long decompteTotal, Long decompteAvance, Long decompteRelicat, Authentication authentication) {
         // 2. Valider l'utilisateur
-        String validationError = validerUtilisateur(missionUser, mandat);
+        String validationError = validerUtilisateur(missionUser, mandat, dateDebut);
         if (validationError != null) {
             throw new IllegalArgumentException("Impossible de créer l'ordre de mission : " + validationError);
         }
@@ -251,7 +251,7 @@ public class OrdreMissionService {
         return fraisInterne * mandat.getDuree();
     }
 
-    private String validerUtilisateur(User user, Mandat mandat) {
+    private String validerUtilisateur(User user, Mandat mandat, Date dateDebutOrdreMission) {
         // Vérification 1 : Ordre de mission en cours
         Optional<OrdreMission> dernierOrdreMission = ordreMissionRepo
             .findTopByUserAndActifTrueOrderByDateFinDesc(user);
@@ -264,14 +264,15 @@ public class OrdreMissionService {
             LocalDate finDernierOrdre = dateFinDernierOrdre.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
-            LocalDate debutMandat = dateDebutMandat.toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
+            LocalDate debutNouvelOrdre = dateDebutOrdreMission.toInstant()  // ✅ Correction
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate();
             
-            if (finDernierOrdre.isAfter(debutMandat)) {
+            if (!debutNouvelOrdre.isAfter(finDernierOrdre)) {
                 return "Ordre de mission en cours jusqu'au " + 
                        finDernierOrdre.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             }
+            
         }
         
         // Vérification 2 : Quota annuel
@@ -378,6 +379,13 @@ public class OrdreMissionService {
         
         // === SECTION PAIEMENT ===
         createPaymentSection(document, ordreMission, normalFont, headerFont);
+
+        // === NOUVELLE PAGE POUR LE VERSO ===
+        document.newPage();
+        
+        // === VERSO - OBSERVATIONS ET DÉCOMPTES ===
+        createVersoPage(document, ordreMission, normalFont, smallFont, headerFont);
+        
         
         document.close();
         
@@ -661,6 +669,355 @@ private void createPaymentSection(Document document, OrdreMission ordreMission, 
     Paragraph dateSignature = new Paragraph("A ................................, le " + currentDate , normalFont);
     dateSignature.setAlignment(Element.ALIGN_RIGHT);
     document.add(dateSignature);
+}
+
+/**
+ * Créer la page verso avec observations et décomptes
+ */
+private void createVersoPage(Document document, OrdreMission ordreMission, Font normalFont, Font smallFont, Font headerFont) throws DocumentException {
+    // === SECTION OBSERVATIONS ===
+    createObservationsSection(document, normalFont, smallFont, headerFont);
+    
+    // === SECTION DÉCOMPTES DES AVANCES ===
+    createDecomptesAvancesSection(document, ordreMission, normalFont, smallFont, headerFont);
+    
+    // // === SECTION NOTE DE FRAIS ===
+    createNoteFraisSection(document, normalFont, smallFont, headerFont);
+    
+    // // === SECTION DÉCOMPTES FINAUX ===
+    createDecomptesFinauxSection(document, normalFont, smallFont, headerFont);
+}
+
+/**
+ * Créer la section observations
+ */
+private void createObservationsSection(Document document, Font normalFont, Font smallFont, Font headerFont) throws DocumentException {
+    // Titre OBSERVATIONS
+    Paragraph obsTitle = new Paragraph("OBSERVATIONS", headerFont);
+    obsTitle.setAlignment(Element.ALIGN_CENTER);
+    obsTitle.setSpacingBefore(10);
+    obsTitle.setSpacingAfter(8);
+    document.add(obsTitle);
+    
+    // Tableau des observations
+    PdfPTable obsTable = new PdfPTable(4);
+    obsTable.setWidthPercentage(100);
+    obsTable.setWidths(new float[]{25, 25, 25, 25});
+    obsTable.setSpacingAfter(10);
+    
+    // En-têtes
+    PdfPCell header1 = new PdfPCell(new Phrase("Visa au départ", smallFont));
+    header1.setHorizontalAlignment(Element.ALIGN_CENTER);
+    header1.setPadding(4);
+    header1.setBorderWidth(1);
+    header1.setMinimumHeight(20);
+    
+    PdfPCell header2 = new PdfPCell(new Phrase("Visa à l'arrivée", smallFont));
+    header2.setHorizontalAlignment(Element.ALIGN_CENTER);
+    header2.setPadding(4);
+    header2.setBorderWidth(1);
+    header2.setMinimumHeight(20);
+    
+    PdfPCell header3 = new PdfPCell(new Phrase("Visa au départ", smallFont));
+    header3.setHorizontalAlignment(Element.ALIGN_CENTER);
+    header3.setPadding(4);
+    header3.setBorderWidth(1);
+    header3.setMinimumHeight(20);
+    
+    PdfPCell header4 = new PdfPCell(new Phrase("Visa à l'arrivée", smallFont));
+    header4.setHorizontalAlignment(Element.ALIGN_CENTER);
+    header4.setPadding(4);
+    header4.setBorderWidth(1);
+    header4.setMinimumHeight(20);
+    
+    obsTable.addCell(header1);
+    obsTable.addCell(header2);
+    obsTable.addCell(header3);
+    obsTable.addCell(header4);
+    
+    // Cellules vides pour les visas
+    for (int i = 0; i < 4; i++) {
+        PdfPCell emptyCell = new PdfPCell(new Phrase("", normalFont));
+        emptyCell.setBorderWidth(1);
+        emptyCell.setMinimumHeight(60);
+        obsTable.addCell(emptyCell);
+    }
+    
+    document.add(obsTable);
+    
+    // Section durée et raison
+    PdfPTable reasonTable = new PdfPTable(2);
+    reasonTable.setWidthPercentage(100);
+    reasonTable.setSpacingAfter(15);
+    
+    // Durée et raison du prolongement
+    PdfPCell reasonCell1 = new PdfPCell(new Phrase("Durée et raison du prolongement..........................", smallFont));
+    reasonCell1.setBorder(Rectangle.NO_BORDER);
+    reasonCell1.setColspan(1);
+    reasonCell1.setPadding(4);
+    
+    PdfPCell reasonCell2 = new PdfPCell(new Phrase("Visa du Directeur Général................................", smallFont));
+    reasonCell2.setBorder(Rectangle.NO_BORDER);
+    reasonCell2.setColspan(1);
+    reasonCell2.setPadding(4);
+    
+    reasonTable.addCell(reasonCell1);
+    reasonTable.addCell(reasonCell2);
+    
+    // Ligne de points
+    PdfPCell dots1 = new PdfPCell(new Phrase(".............................................................................", smallFont));
+    dots1.setBorder(Rectangle.NO_BORDER);
+    dots1.setPadding(4);
+    
+    PdfPCell dots2 = new PdfPCell(new Phrase(".............................................................................", smallFont));
+    dots2.setBorder(Rectangle.NO_BORDER);
+    dots2.setPadding(4);
+    
+    reasonTable.addCell(dots1);
+    reasonTable.addCell(dots2);
+    
+    // Durée et raison de fin prématurée
+    PdfPCell prematureCell1 = new PdfPCell(new Phrase("Durée et raison de fin prématurée de", smallFont));
+    prematureCell1.setBorder(Rectangle.NO_BORDER);
+    prematureCell1.setPadding(4);
+    
+    PdfPCell prematureCell2 = new PdfPCell(new Phrase("", smallFont));
+    prematureCell2.setBorder(Rectangle.NO_BORDER);
+    prematureCell2.setPadding(4);
+    
+    reasonTable.addCell(prematureCell1);
+    reasonTable.addCell(prematureCell2);
+    
+    PdfPCell missionCell = new PdfPCell(new Phrase("la mission................................", smallFont));
+    missionCell.setBorder(Rectangle.NO_BORDER);
+    missionCell.setPadding(4);
+    
+    PdfPCell emptyCell = new PdfPCell(new Phrase("", smallFont));
+    emptyCell.setBorder(Rectangle.NO_BORDER);
+    emptyCell.setPadding(4);
+    
+    reasonTable.addCell(missionCell);
+    reasonTable.addCell(emptyCell);
+    
+    // Ligne de points finale
+    PdfPCell finalDots1 = new PdfPCell(new Phrase(".............................................................................", smallFont));
+    finalDots1.setBorder(Rectangle.NO_BORDER);
+    finalDots1.setPadding(4);
+    
+    PdfPCell finalDots2 = new PdfPCell(new Phrase(".............................................................................", smallFont));
+    finalDots2.setBorder(Rectangle.NO_BORDER);
+    finalDots2.setPadding(4);
+    
+    reasonTable.addCell(finalDots1);
+    reasonTable.addCell(finalDots2);
+    
+    document.add(reasonTable);
+}
+
+/**
+ * Créer la section décomptes des avances
+ */
+private void createDecomptesAvancesSection(Document document, OrdreMission ordreMission, Font normalFont, Font smallFont, Font headerFont) throws DocumentException {
+    // Titre
+    Paragraph title = new Paragraph("DÉCOMPTES DES AVANCES - DETAILS OF ADVANCES", headerFont);
+    title.setAlignment(Element.ALIGN_CENTER);
+    title.setSpacingBefore(5);
+    title.setSpacingAfter(8);
+    document.add(title);
+    
+    // Tableau principal
+    PdfPTable mainTable = new PdfPTable(7);
+    mainTable.setWidthPercentage(100);
+    mainTable.setWidths(new float[]{20, 10, 10, 10, 10, 10, 30});
+    mainTable.setSpacingAfter(10);
+    
+    // En-têtes
+    String[] headers = {
+        "AU DÉPART - AT DEPARTURE",
+        "NOMBRE Number",
+        "TAUX Rate",
+        "DÉCOMPTE Sub-total",
+        "NOMBRE Number",
+        "TAUX Rate",
+        "Indication des réquisitions"
+    };
+    
+    for (String header : headers) {
+        PdfPCell headerCell = new PdfPCell(new Phrase(header, new Font(Font.FontFamily.HELVETICA, 8, Font.BOLD)));
+        headerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        headerCell.setPadding(3);
+        headerCell.setBorderWidth(1);
+        headerCell.setMinimumHeight(25);
+        mainTable.addCell(headerCell);
+    }
+    
+    // Lignes de données
+    String[] rowLabels = {
+        "INDEMNITÉ JOURNALIÈRE Daily allowance",
+        "Normale - Normal",
+        "Réduite - Reduced",
+        "Partielle - Partial"
+    };
+    
+    for (String label : rowLabels) {
+        // Première colonne - label
+        PdfPCell labelCell = new PdfPCell(new Phrase(label, new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+        labelCell.setPadding(3);
+        labelCell.setBorderWidth(1);
+        labelCell.setMinimumHeight(20);
+        mainTable.addCell(labelCell);
+        
+        // Colonnes de données (vides pour remplissage)
+        for (int i = 0; i < 6; i++) {
+            PdfPCell dataCell = new PdfPCell(new Phrase("", normalFont));
+            dataCell.setBorderWidth(1);
+            dataCell.setMinimumHeight(20);
+            mainTable.addCell(dataCell);
+        }
+    }
+    
+    // Ligne TOTAL
+    PdfPCell totalCell = new PdfPCell(new Phrase("TOTAL", headerFont));
+    totalCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+    totalCell.setPadding(3);
+    totalCell.setBorderWidth(1);
+    totalCell.setMinimumHeight(25);
+    mainTable.addCell(totalCell);
+    
+    for (int i = 0; i < 4; i++) {
+        PdfPCell emptyCell = new PdfPCell(new Phrase("", normalFont));
+        emptyCell.setBorderWidth(1);
+        emptyCell.setMinimumHeight(25);
+        mainTable.addCell(emptyCell);
+    }
+    
+    PdfPCell totalRightCell = new PdfPCell(new Phrase("TOTAL", headerFont));
+    totalRightCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+    totalRightCell.setPadding(3);
+    totalRightCell.setBorderWidth(1);
+    totalRightCell.setMinimumHeight(25);
+    mainTable.addCell(totalRightCell);
+    
+    PdfPCell finalEmptyCell = new PdfPCell(new Phrase("", normalFont));
+    finalEmptyCell.setBorderWidth(1);
+    finalEmptyCell.setMinimumHeight(25);
+    mainTable.addCell(finalEmptyCell);
+    
+    document.add(mainTable);
+    
+    // Section des montants
+    PdfPTable amountTable = new PdfPTable(2);
+    amountTable.setWidthPercentage(100);
+    amountTable.setSpacingAfter(10);
+    
+    // Colonne gauche
+    PdfPCell leftAmount = new PdfPCell();
+    leftAmount.setBorder(Rectangle.NO_BORDER);
+    leftAmount.addElement(new Paragraph("ARRÊTÉ À LA SOMME DE", smallFont));
+    leftAmount.addElement(new Paragraph("CLOSE AT THE SUM OF", smallFont));
+    leftAmount.addElement(new Paragraph("", normalFont));
+    leftAmount.addElement(new Paragraph("Payé en advance", smallFont));
+    leftAmount.addElement(new Paragraph("Paid as advance", smallFont));
+    leftAmount.addElement(new Paragraph("", normalFont));
+    leftAmount.addElement(new Paragraph("A (AL) ________________, le (on the) ________________", smallFont));
+    leftAmount.addElement(new Paragraph("", normalFont));
+    leftAmount.addElement(new Paragraph("La (The) ________________", smallFont));
+    leftAmount.addElement(new Paragraph("                    (Signature)", smallFont));
+    
+    // Colonne droite
+    PdfPCell rightAmount = new PdfPCell();
+    rightAmount.setBorder(Rectangle.NO_BORDER);
+    rightAmount.addElement(new Paragraph("PAYÉ LA SOMME DE", smallFont));
+    rightAmount.addElement(new Paragraph("PAID THE SUM OF", smallFont));
+    rightAmount.addElement(new Paragraph("", normalFont));
+    rightAmount.addElement(new Paragraph("A titre de", smallFont));
+    rightAmount.addElement(new Paragraph("As title of", smallFont));
+    rightAmount.addElement(new Paragraph("", normalFont));
+    rightAmount.addElement(new Paragraph("A (AL) ________________, le (on the) ________________", smallFont));
+    rightAmount.addElement(new Paragraph("", normalFont));
+    rightAmount.addElement(new Paragraph("La (The) ________________", smallFont));
+    rightAmount.addElement(new Paragraph("                    (Signature)", smallFont));
+    
+    amountTable.addCell(leftAmount);
+    amountTable.addCell(rightAmount);
+    
+    document.add(amountTable);
+}
+
+/**
+ * Créer la section note de frais
+ */
+private void createNoteFraisSection(Document document, Font normalFont, Font smallFont, Font headerFont) throws DocumentException {
+    // Titre
+    Paragraph title = new Paragraph("NOTE DE FRAIS", headerFont);
+    title.setAlignment(Element.ALIGN_CENTER);
+    title.setSpacingBefore(15);
+    title.setSpacingAfter(8);
+    document.add(title);
+    
+    // Ligne d'imputation
+    Paragraph imputation = new Paragraph("Imputation................................................................................................", smallFont);
+    imputation.setSpacingAfter(5);
+    document.add(imputation);
+    
+    Paragraph montant = new Paragraph("Montant total des frais................................................................................................", smallFont);
+    montant.setSpacingAfter(10);
+    document.add(montant);
+}
+
+/**
+ * Créer la section décomptes finaux
+ */
+private void createDecomptesFinauxSection(Document document, Font normalFont, Font smallFont, Font headerFont) throws DocumentException {
+    // Tableau des décomptes finaux
+    PdfPTable finalTable = new PdfPTable(2);
+    finalTable.setWidthPercentage(100);
+    finalTable.setSpacingAfter(15);
+    
+    // Colonne gauche - DÉCOMPTES DES AVANCES
+    PdfPCell leftFinalCell = new PdfPCell();
+    leftFinalCell.setBorderWidth(1);
+    leftFinalCell.setPadding(3);
+    
+    leftFinalCell.addElement(new Paragraph("DÉCOMPTES DES AVANCES", new Font(Font.FontFamily.HELVETICA, 8, Font.BOLD)));
+    leftFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("Montant en chiffres", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("En lettres................................................................................................", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("................................................................................................", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("Acquit du bénéficiaire", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("Reçu", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("CNI N°................................................................................................", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("Délivrée le........................A................................", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    leftFinalCell.addElement(new Paragraph("SIGNATURE", new Font(Font.FontFamily.HELVETICA, 8, Font.BOLD)));
+    
+    // Colonne droite - DÉCOMPTE DU RESTE
+    PdfPCell rightFinalCell = new PdfPCell();
+    rightFinalCell.setBorderWidth(1);
+    rightFinalCell.setPadding(3);
+    
+    rightFinalCell.addElement(new Paragraph("DÉCOMPTE DU RESTE", new Font(Font.FontFamily.HELVETICA, 8, Font.BOLD)));
+    rightFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("Montant en chiffres", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("En lettres................................................................................................", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("................................................................................................", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("Acquit du bénéficiaire", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("Reçu", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("CNI N°................................................................................................", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("Délivrée le........................A................................", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL)));
+    rightFinalCell.addElement(new Paragraph("SIGNATURE", new Font(Font.FontFamily.HELVETICA, 8, Font.BOLD)));
+    
+    finalTable.addCell(leftFinalCell);
+    finalTable.addCell(rightFinalCell);
+    
+    document.add(finalTable);
 }
     @Transactional
     public OrdreMissionResponseDto confirmerOrdreMission(Long ordreMissionId, Authentication authentication) {

@@ -227,7 +227,7 @@ public class OrdreMissionController {
         }
     }
 
-    // NOUVEAU: Récupérer les ordres de mission par utilisateur spécifique
+    // Récupérer les ordres de mission par utilisateur spécifique
     @GetMapping("/users/{userId}")
     public ResponseEntity<?> getOrdresMissionByUser(@PathVariable Long userId) {
         try {
@@ -242,7 +242,7 @@ public class OrdreMissionController {
         }
     }
 
-    // NOUVEAU: Récupérer les ordres de mission par mandat spécifique
+    // Récupérer les ordres de mission par mandat spécifique
     @GetMapping("/mandat/{mandatId}")
     public ResponseEntity<?> getOrdresMissionByMandat(@PathVariable Long mandatId) {
         try {
