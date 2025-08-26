@@ -18,7 +18,7 @@ public class RangResponseDto {
     private BigDecimal fraisExterne;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
-    private boolean actif;
+    // private boolean actif;
     
 }
 

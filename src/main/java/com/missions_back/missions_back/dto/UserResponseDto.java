@@ -9,6 +9,7 @@ public record UserResponseDto(
     String matricule, 
     Long quotaAnnuel,
     RoleResponseDto role, 
+    RangResponseDto rang,
     String fonction,
     LocalDateTime created_at, 
     LocalDateTime updated_at

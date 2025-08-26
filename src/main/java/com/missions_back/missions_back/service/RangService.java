@@ -39,6 +39,9 @@ public class RangService {
         rang.setCode(rangDto.getCode());
         rang.setFraisInterne(rangDto.getFraisInterne());
         rang.setFraisExterne(rangDto.getFraisExterne());
+        rang.setCreated_at(LocalDateTime.now());
+        rang.setUpdated_at(LocalDateTime.now());
+        rang.setActif(true);
 
         rang = rangRepository.save(rang);
         return mapToResponseDto(rang);
@@ -85,6 +88,7 @@ public class RangService {
         rang.setCode(rangDto.getCode());
         rang.setFraisInterne(rangDto.getFraisInterne());
         rang.setFraisExterne(rangDto.getFraisExterne());
+        rang.setUpdated_at(LocalDateTime.now());
 
         rang = rangRepository.save(rang);
         return mapToResponseDto(rang);
@@ -139,7 +143,6 @@ public class RangService {
         dto.setFraisExterne(rang.getFraisExterne());
         dto.setCreated_at(rang.getCreated_at());
         dto.setUpdated_at(rang.getUpdated_at());
-        dto.setActif(rang.isActif());
         
         
         

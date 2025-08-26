@@ -27,6 +27,7 @@ import com.missions_back.missions_back.dto.MandatAvecPieceJointeResponseDto;
 import com.missions_back.missions_back.dto.MandatDto;
 import com.missions_back.missions_back.dto.MandatResponseDto;
 import com.missions_back.missions_back.dto.PieceJointeResponseDto;
+import com.missions_back.missions_back.dto.RangResponseDto;
 import com.missions_back.missions_back.dto.RapportResponseDto;
 import com.missions_back.missions_back.dto.RessourceResponseDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
@@ -109,6 +110,13 @@ public class MandatService {
                 .collect(Collectors.toList());
     }
 
+    public List<MandatResponseDto> getMandatsAchevesAvecRapport() {
+        List<Mandat> mandats = mandatRepo.findByStatutAndActifTrue(MandatStatut.ACHEVE_AVEC_RAPPORT);
+        return mandats.stream()
+                .map(this::convertToMandatResponseDto)
+                .collect(Collectors.toList());
+    }
+
 @Transactional
 public MandatResponseDto createMandat(MandatDto mandatDto, Long createdByUserId) {
     if (mandatRepo.findByReference(mandatDto.reference()).isPresent()) {
@@ -171,17 +179,16 @@ public MandatResponseDto createMandat(MandatDto mandatDto, Long createdByUserId)
             "Le mandat " + mandat.getReference() + " est en attente de confirmation."
         );
     }
-    // Notifier le DRH si le statut est EN_ATTENTE_CONFIRMATION
-    if (mandat.getStatut() == MandatStatut.EN_ATTENTE_CONFIRMATION) {
-        var drhList = userRepo.findByRole_NameAndActifTrue(com.missions_back.missions_back.model.RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES);
-        if (!drhList.isEmpty()) {
-            emailService.sendEmail(
-                drhList.stream().map(User::getEmail).toList(),
-                "Mandat à confirmer",
-                "Un mandat (" + mandat.getReference() + ") attend votre confirmation."
-            );
-        }
+    // Notifier le DRH
+    var drhList = userRepo.findByRole_NameAndActifTrue(com.missions_back.missions_back.model.RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES);
+    if (!drhList.isEmpty()) {
+        emailService.sendEmail(
+            drhList.stream().map(User::getEmail).toList(),
+            "Mandat à confirmer",
+            "Un mandat (" + mandat.getReference() + ") attend votre confirmation."
+        );
     }
+    
     return convertToMandatResponseDto(createdMandat);
 }
 
@@ -209,29 +216,17 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
     
     Mandat confirmedMandat = mandatRepo.save(mandat);
 
-    // Générer automatiquement les ordres de mission seulement pour les utilisateurs conformes
-    // if (!validationResult.getUtilisateursConformes().isEmpty()) {
-    //     genererOrdresMissionPourUtilisateurs(confirmedMandat, validationResult.getUtilisateursConformes());
-    // }
+    // Notifier les utilisateurs du mandat
+    if (mandat.getUsers() != null && !mandat.getUsers().isEmpty()) {
+        emailService.sendEmail(
+            mandat.getUsers().stream().map(User::getEmail).toList(),
+            "Mandat confirmé",
+            "Le mandat " + mandat.getReference() + " a été confirmé par " + user.getUsername() + "."
+        );
+    }
 
-    // Créer la réponse avec les informations de validation
     MandatResponseDto response = convertToMandatResponseDto(confirmedMandat);
     
-    // Ajouter des informations sur les utilisateurs non conformes si nécessaire
-    // if (!validationResult.getUtilisateursNonConformes().isEmpty()) {
-    //     // Vous pouvez ajouter ces informations dans la réponse ou les logger
-    //     String messageNonConformes = "Utilisateurs non conformes : " + 
-    //         String.join(", ", validationResult.getUtilisateursNonConformes().stream()
-    //             .map(u -> u.getName() + " (" + validationResult.getErreursParUtilisateur().get(u.getId()) + ")")
-    //             .toList());
-        
-    //     // Si votre MandatResponseDto a un champ pour les messages, utilisez-le
-    //     // response.setMessageValidation(messageNonConformes);
-        
-    //     // Sinon, vous pouvez logger l'information
-    //     System.out.println("Mandat " + mandat.getReference() + " confirmé partiellement. " + messageNonConformes);
-    // }
-
     return response;
 }
 
@@ -361,6 +356,15 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
         for (Mandat mandat : mandatsADemarrer) {
             mandat.setStatut(MandatStatut.EN_COURS);
             mandatRepo.save(mandat);
+
+            // Notifier les utilisateurs du mandat
+            if (mandat.getUsers() != null && !mandat.getUsers().isEmpty()) {
+                emailService.sendEmail(
+                    mandat.getUsers().stream().map(User::getEmail).toList(),
+                    "Mandat démarré",
+                    "Le mandat " + mandat.getReference() + " a été démarré."
+                );
+            }
         }
         
         // Mettre à jour les mandats EN_COURS vers ACHEVE
@@ -370,6 +374,15 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
         for (Mandat mandat : mandatsATerminer) {
             mandat.setStatut(MandatStatut.ACHEVE);
             mandatRepo.save(mandat);
+
+            // Notifier les utilisateurs du mandat
+            if (mandat.getUsers() != null && !mandat.getUsers().isEmpty()) {
+                emailService.sendEmail(
+                    mandat.getUsers().stream().map(User::getEmail).toList(),
+                    "Mandat terminé",
+                    "Le mandat " + mandat.getReference() + " a été terminé."
+                );
+            }
         }
     }
 
@@ -408,6 +421,12 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
                 .map(this::convertToRessourceResponseDto)
                 .collect(Collectors.toList()) : 
             List.of();
+        // Convertir les pièces jointes
+        List<PieceJointeResponseDto> pieceJointeDtos = mandat.getPiecesJointes() != null ? 
+            mandat.getPiecesJointes().stream()
+                .map(this::convertirEnResponseDto)
+                .collect(Collectors.toList()) : 
+            List.of();
 
         // Convertir le rapport
         RapportResponseDto rapportDto = mandat.getRapport() != null ? 
@@ -418,7 +437,7 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
         if (mandat.getCreatedByUserId() != null) {
             Optional<User> creator = userRepo.findById(mandat.getCreatedByUserId());
             if (creator.isPresent()) {
-                createdBy = creator.get().getUsername();
+                createdBy = creator.get().getName();
             }
         }
 
@@ -442,8 +461,8 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
             mandat.getDateConfirmation(),
             userDtos.size(), // usersCount
             villeDtos.size(), // villesCount
-            ressourceDtos.size() // ressourcesCount
-            
+            ressourceDtos.size(), // ressourcesCount
+            pieceJointeDtos
         );
     }
     
@@ -457,14 +476,25 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
                 user.getRole().getCreated_at(),
                 user.getRole().getUpdated_at()
             ) : null;
+        RangResponseDto rangDto = user.getRang() != null ?
+            new RangResponseDto(
+                user.getRang().getId(),
+                user.getRang().getNom(),
+                user.getRang().getCode(),
+                user.getRang().getFraisInterne(),
+                user.getRang().getFraisExterne(),
+                user.getRang().getCreated_at(),
+                user.getRang().getUpdated_at()
+            ) : null;
 
         return new UserResponseDto(
             user.getId(),
-            user.getUsername(),
+            user.getName(),
             user.getEmail(),
             user.getMatricule(),
             user.getQuotaAnnuel(),
             roleDto,
+            rangDto,
             user.getFonction(),
             user.getCreated_at(),
             user.getUpdated_at()
@@ -498,5 +528,43 @@ public MandatResponseDto confirmerMandat(Long mandatId, Authentication authentic
             rapport.getCreated_at(),
             rapport.getUpdated_at()
         );
+    }
+
+    private PieceJointeResponseDto convertirEnResponseDto(PieceJointe pieceJointe) {
+        PieceJointeResponseDto dto = new PieceJointeResponseDto();
+        dto.setId(pieceJointe.getId());
+        dto.setNom(pieceJointe.getNom());
+        dto.setNomOriginal(pieceJointe.getNomOriginal());
+        dto.setCheminFichier(pieceJointe.getCheminFichier());
+        dto.setTypeMime(pieceJointe.getTypeMime());
+        dto.setTaille(pieceJointe.getTaille());
+        dto.setDescription(pieceJointe.getDescription());
+        dto.setCreated_at(pieceJointe.getCreated_at());
+        dto.setUpdated_at(pieceJointe.getUpdated_at());
+        dto.setActif(pieceJointe.isActif());
+
+        // Relations
+        if (pieceJointe.getUser() != null) {
+            dto.setUserId(pieceJointe.getUser().getId());
+            // Se rassurer que la classe User a une méthode getName()
+            dto.setUserName(pieceJointe.getUser().getName());
+        }
+
+        if (pieceJointe.getMandat() != null) {
+            dto.setMandatId(pieceJointe.getMandat().getId());
+            dto.setMandatReference(pieceJointe.getMandat().getReference());
+        }
+
+        if (pieceJointe.getOrdreMission() != null) {
+            dto.setOrdreMissionId(pieceJointe.getOrdreMission().getId());
+            dto.setOrdreMissionReference(pieceJointe.getOrdreMission().getReference());
+        }
+
+        if (pieceJointe.getRapport() != null) {
+            dto.setRapportId(pieceJointe.getRapport().getId());
+            dto.setRapportReference(pieceJointe.getRapport().getReference());
+        }
+
+        return dto;
     }
 }

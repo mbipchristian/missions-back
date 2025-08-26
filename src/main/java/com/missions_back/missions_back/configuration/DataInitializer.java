@@ -154,15 +154,15 @@ public class DataInitializer {
     private void initVilles() {
         // Exemple de villes, à adapter selon vos besoins
         createVille("YDE", "Yaoundé", true);
-        createVille("DLA", "Douala", false);
-        createVille("BTA", "Bertoua", false);
-        createVille("BFX", "Bafoussam", false);
-        createVille("GRA", "Garoua", false);
-        createVille("MRA", "Maroua", false);
-        createVille("EBO", "Ebolowa", false);
-        createVille("BAM", "Bamenda", false);
-        createVille("LIM", "Limbe", false);
-        createVille("KRIBI", "Kribi", false);
+        createVille("DLA", "Douala", true);
+        createVille("BTA", "Bertoua", true);
+        createVille("BFX", "Bafoussam", true);
+        createVille("GRA", "Garoua", true);
+        createVille("MRA", "Maroua", true);
+        createVille("EBO", "Ebolowa", true);
+        createVille("BAM", "Bamenda", true);
+        createVille("LIM", "Limbe", true);
+        createVille("KRIBI", "Kribi", true);
     }
 
     private void createVille(String code, String name, boolean interieur) {

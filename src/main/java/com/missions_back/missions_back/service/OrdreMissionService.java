@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -23,17 +24,25 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import com.missions_back.missions_back.dto.DecomptesPreCreationRequest;
+import com.missions_back.missions_back.dto.DecomptesResponse;
 import com.missions_back.missions_back.dto.OrdreMissionResponseDto;
 import com.missions_back.missions_back.dto.OrdreMissionUpdateDto;
+import com.missions_back.missions_back.dto.PieceJointeResponseDto;
+import com.missions_back.missions_back.dto.RangResponseDto;
+import com.missions_back.missions_back.dto.RoleResponseDto;
+import com.missions_back.missions_back.dto.UserResponseDto;
 import com.missions_back.missions_back.model.Mandat;
 import com.missions_back.missions_back.model.OrdreMission;
 import com.missions_back.missions_back.model.OrdreMissionStatut;
+import com.missions_back.missions_back.model.PieceJointe;
 import com.missions_back.missions_back.model.Ressource;
 import com.missions_back.missions_back.model.User;
 import com.missions_back.missions_back.model.Ville;
 import com.missions_back.missions_back.repository.MandatRepo;
 import com.missions_back.missions_back.repository.OrdreMissionRepo;
 import com.missions_back.missions_back.repository.UserRepo;
+import com.missions_back.missions_back.repository.VilleRepo;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -59,12 +68,14 @@ public class OrdreMissionService {
     private final UserRepo userRepo;
     private final MandatRepo mandatRepo;
     private final EmailService emailService;
+    private final VilleRepo villeRepo;
 
-    public OrdreMissionService(OrdreMissionRepo ordreMissionRepo, UserRepo userRepo, MandatRepo mandatRepo, EmailService emailService) {
+    public OrdreMissionService(OrdreMissionRepo ordreMissionRepo, UserRepo userRepo, MandatRepo mandatRepo, EmailService emailService, VilleRepo villeRepo) {
         this.ordreMissionRepo = ordreMissionRepo;
         this.userRepo = userRepo;
         this.mandatRepo = mandatRepo;
         this.emailService = emailService;
+        this.villeRepo = villeRepo;
     }
     /**
      * Récupérer tous les ordres de missions en attente de justificatif
@@ -122,134 +133,217 @@ public class OrdreMissionService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public OrdreMissionResponseDto updateOrdreMission(Long ordreMissionId, OrdreMissionUpdateDto updateDto, Authentication authentication) {
-        // Extraire l'utilisateur depuis le token JWT
-        String userEmail = authentication.getName();
-        User user = userRepo.findByEmail(userEmail)
-            .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
+    // @Transactional
+    // public OrdreMissionResponseDto updateOrdreMission(Long ordreMissionId, OrdreMissionUpdateDto updateDto, Authentication authentication) {
+    //     // Extraire l'utilisateur depuis le token JWT
+    //     String userEmail = authentication.getName();
+    //     User user = userRepo.findByEmail(userEmail)
+    //         .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
         
-        // Récupérer l'ordre de mission existant
-        OrdreMission ordreMission = ordreMissionRepo.findById(ordreMissionId)
-            .orElseThrow(() -> new EntityNotFoundException("Ordre de mission non trouvé avec l'ID: " + ordreMissionId));
+    //     // Récupérer l'ordre de mission existant
+    //     OrdreMission ordreMission = ordreMissionRepo.findById(ordreMissionId)
+    //         .orElseThrow(() -> new EntityNotFoundException("Ordre de mission non trouvé avec l'ID: " + ordreMissionId));
 
-        // Mise à jour des champs si ils sont fournis dans le DTO
-        if (updateDto.getObjectif() != null) {
-            ordreMission.setObjectif(updateDto.getObjectif());
-        }
+    //     // Mise à jour des champs si ils sont fournis dans le DTO
+    //     if (updateDto.getObjectif() != null) {
+    //         ordreMission.setObjectif(updateDto.getObjectif());
+    //     }
         
-        if (updateDto.getModePaiement() != null) {
-            ordreMission.setModePaiement(updateDto.getModePaiement());
-        }
+    //     if (updateDto.getModePaiement() != null) {
+    //         ordreMission.setModePaiement(updateDto.getModePaiement());
+    //     }
         
-        if (updateDto.getDevise() != null) {
-            ordreMission.setDevise(updateDto.getDevise());
-        }
+    //     if (updateDto.getDevise() != null) {
+    //         ordreMission.setDevise(updateDto.getDevise());
+    //     }
         
-        if (updateDto.getDateDebut() != null) {
-            ordreMission.setDateDebut(updateDto.getDateDebut());
-        }
+    //     if (updateDto.getDateDebut() != null) {
+    //         ordreMission.setDateDebut(updateDto.getDateDebut());
+    //     }
         
-        if (updateDto.getDateFin() != null) {
-            ordreMission.setDateFin(updateDto.getDateFin());
-        }
+    //     if (updateDto.getDateFin() != null) {
+    //         ordreMission.setDateFin(updateDto.getDateFin());
+    //     }
         
-        if (updateDto.getDuree() != null) {
-            ordreMission.setDuree(updateDto.getDuree());
-        }
+    //     if (updateDto.getDuree() != null) {
+    //         ordreMission.setDuree(updateDto.getDuree());
+    //     }
         
-        if (updateDto.getTauxAvance() != null) {
-            ordreMission.setTauxAvance(updateDto.getTauxAvance());
-        }
+    //     if (updateDto.getTauxAvance() != null) {
+    //         ordreMission.setTauxAvance(updateDto.getTauxAvance());
+    //     }
         
-        if (updateDto.getDecompteTotal() != null) {
-            ordreMission.setDecompteTotal(updateDto.getDecompteTotal());
-        }
+    //     if (updateDto.getDecompteTotal() != null) {
+    //         ordreMission.setDecompteTotal(updateDto.getDecompteTotal());
+    //     }
         
-        if (updateDto.getDecompteAvance() != null) {
-            ordreMission.setDecompteAvance(updateDto.getDecompteAvance());
-        }
+    //     if (updateDto.getDecompteAvance() != null) {
+    //         ordreMission.setDecompteAvance(updateDto.getDecompteAvance());
+    //     }
         
-        if (updateDto.getDecompteRelicat() != null) {
-            ordreMission.setDecompteRelicat(updateDto.getDecompteRelicat());
-        }
+    //     if (updateDto.getDecompteRelicat() != null) {
+    //         ordreMission.setDecompteRelicat(updateDto.getDecompteRelicat());
+    //     }
         
-        if (updateDto.getStatut() != null) {
-            ordreMission.setStatut(updateDto.getStatut());
-            // Notifier l'utilisateur concerné
-            if (ordreMission.getUser() != null) {
-                emailService.sendEmail(
-                    ordreMission.getUser().getEmail(),
-                    "Changement de statut de l'ordre de mission",
-                    "L'ordre de mission " + ordreMission.getReference() + " est maintenant au statut : " + updateDto.getStatut().getLibelle()
-                );
-            }
-            // Notifier le DRH si le statut est EN_ATTENTE_CONFIRMATION
-            if (updateDto.getStatut() == com.missions_back.missions_back.model.OrdreMissionStatut.EN_ATTENTE_CONFIRMATION) {
-                var drhList = userRepo.findByRole_NameAndActifTrue(com.missions_back.missions_back.model.RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES);
-                if (!drhList.isEmpty()) {
-                    emailService.sendEmail(
-                        drhList.stream().map(User::getEmail).toList(),
-                        "Ordre de mission à confirmer",
-                        "Un ordre de mission (" + ordreMission.getReference() + ") attend votre confirmation."
-                    );
-                }
-            }
-        }
+    //     if (updateDto.getStatut() != null) {
+    //         ordreMission.setStatut(updateDto.getStatut());
+    //         // Notifier l'utilisateur concerné
+    //         if (ordreMission.getUser() != null) {
+    //             emailService.sendEmail(
+    //                 ordreMission.getUser().getEmail(),
+    //                 "Changement de statut de l'ordre de mission",
+    //                 "L'ordre de mission " + ordreMission.getReference() + " est maintenant au statut : " + updateDto.getStatut().getLibelle()
+    //             );
+    //         }
+    //         // Notifier le DRH si le statut est EN_ATTENTE_CONFIRMATION
+    //         if (updateDto.getStatut() == com.missions_back.missions_back.model.OrdreMissionStatut.EN_ATTENTE_CONFIRMATION) {
+    //             var drhList = userRepo.findByRole_NameAndActifTrue(com.missions_back.missions_back.model.RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES);
+    //             if (!drhList.isEmpty()) {
+    //                 emailService.sendEmail(
+    //                     drhList.stream().map(User::getEmail).toList(),
+    //                     "Ordre de mission à confirmer",
+    //                     "Un ordre de mission (" + ordreMission.getReference() + ") attend votre confirmation."
+    //                 );
+    //             }
+    //         }
+    //     }
 
-        // Mettre à jour la date de modification
-        ordreMission.setUpdated_at(LocalDateTime.now());
+    //     // Mettre à jour la date de modification
+    //     ordreMission.setUpdated_at(LocalDateTime.now());
         
-        // Sauvegarder les modifications
-        OrdreMission updatedOrdreMission = ordreMissionRepo.save(ordreMission);
+    //     // Sauvegarder les modifications
+    //     OrdreMission updatedOrdreMission = ordreMissionRepo.save(ordreMission);
         
-        return mapToResponseDto(updatedOrdreMission);
-    }
+    //     return mapToResponseDto(updatedOrdreMission);
+    // }
 
     /**
      * Créer un nouvel ordre de mission pour un utilisateur et un mandat donnés
      */
     @Transactional
     public OrdreMissionResponseDto creerOrdreMission(Mandat mandat, User missionUser, String reference, String objectif, String modePaiement, String devise, Long tauxAvance, Date dateDebut, Date dateFin, Long duree, Long decompteTotal, Long decompteAvance, Long decompteRelicat, Authentication authentication) {
-        // 2. Valider l'utilisateur
-        String validationError = validerUtilisateur(missionUser, mandat, dateDebut);
-        if (validationError != null) {
-            throw new IllegalArgumentException("Impossible de créer l'ordre de mission : " + validationError);
-        }
-        OrdreMission ordreMission = new OrdreMission();
-        ordreMission.setReference(reference);
-        ordreMission.setObjectif(objectif);
-        ordreMission.setModePaiement(modePaiement);
-        ordreMission.setDevise(devise);
-        ordreMission.setTauxAvance(tauxAvance);
-        ordreMission.setDateDebut(dateDebut);
-        ordreMission.setDateFin(dateFin);
-        ordreMission.setDuree(duree);
-
-        // Calculs financiers par défaut
-        decompteTotal = calculateDecompteTotal(missionUser, mandat);
-        decompteAvance = decompteTotal * ordreMission.getTauxAvance() / 100;
-        decompteRelicat = decompteTotal - decompteAvance;
-
-        ordreMission.setDecompteTotal(decompteTotal);
-        ordreMission.setDecompteAvance(decompteAvance);
-        ordreMission.setDecompteRelicat(decompteRelicat);
-        ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
-        ordreMission.setUser(missionUser);
-        ordreMission.setMandat(mandat);
-        ordreMission.setActif(true);
-        OrdreMission saved = ordreMissionRepo.save(ordreMission);
-        // Mettre à jour le quota de l'utilisateur
-        missionUser.setQuotaAnnuel(missionUser.getQuotaAnnuel() + mandat.getDuree());
-        userRepo.save(missionUser);
-        return mapToResponseDto(saved);
+    // 2. Valider l'utilisateur
+    String validationError = validerUtilisateur(missionUser, mandat, dateDebut);
+    if (validationError != null) {
+        throw new IllegalArgumentException("Impossible de créer l'ordre de mission : " + validationError);
     }
-    private Long calculateDecompteTotal(User user, Mandat mandat) {
-        Long fraisInterne = user.getRang().getFraisInterne().longValue();
     
-        // Multiplier par la durée du mandat
-        return fraisInterne * mandat.getDuree();
+    OrdreMission ordreMission = new OrdreMission();
+    ordreMission.setReference(reference);
+    ordreMission.setObjectif(objectif);
+    ordreMission.setModePaiement(modePaiement);
+    ordreMission.setDevise(devise);
+    ordreMission.setTauxAvance(tauxAvance);
+    ordreMission.setDateDebut(dateDebut);
+    ordreMission.setDateFin(dateFin);
+    ordreMission.setDuree(duree);
+
+    // Calculs financiers par défaut - CORRECTION: utiliser les villes de l'ordre de mission
+    decompteTotal = calculateDecompteTotal(missionUser, ordreMission);
+    decompteAvance = decompteTotal * ordreMission.getTauxAvance() / 100;
+    decompteRelicat = decompteTotal - decompteAvance;
+
+    ordreMission.setDecompteTotal(decompteTotal);
+    ordreMission.setDecompteAvance(decompteAvance);
+    ordreMission.setDecompteRelicat(decompteRelicat);
+    ordreMission.setStatut(OrdreMissionStatut.EN_ATTENTE_JUSTIFICATIF);
+    ordreMission.setUser(missionUser);
+    ordreMission.setMandat(mandat);
+    ordreMission.setActif(true);
+    
+    OrdreMission saved = ordreMissionRepo.save(ordreMission);
+    
+    // CORRECTION: Utiliser la durée de l'ordre de mission, pas du mandat
+    missionUser.setQuotaAnnuel(missionUser.getQuotaAnnuel() + duree);
+    userRepo.save(missionUser);
+
+    // Notifier l'utilisateur de la création de l'ordre de mission
+    emailService.sendEmail(
+        missionUser.getEmail(),
+        "Ordre de mission créé",
+        "Votre ordre de mission " + ordreMission.getReference() + " a été créé avec succès."
+    );
+    
+    return mapToResponseDto(saved);
+}
+
+private Long calculateDecompteTotal(User user, OrdreMission ordreMission) {
+    // Récupérer les villes spécifiquement sélectionnées pour cet ordre de mission
+    List<Ville> villesSelectionnees = ordreMission.getVilles(); // Utiliser les villes de l'ordre de mission
+    
+    if (villesSelectionnees == null || villesSelectionnees.isEmpty()) {
+        // Fallback vers les villes du mandat si aucune ville spécifique n'est définie
+        villesSelectionnees = ordreMission.getMandat() != null ? 
+                             ordreMission.getMandat().getVilles() : new ArrayList<>();
     }
+    
+    // Vérifier s'il y a au moins une ville extérieure parmi les villes sélectionnées
+    boolean hasVilleExterieure = villesSelectionnees.stream()
+            .anyMatch(ville -> !ville.isInterieur());
+    
+    if (hasVilleExterieure) {
+        return calculateFraisExterne(ordreMission, user);
+    } else {
+        return calculateFraisInterne(ordreMission, user);
+    }
+}
+public DecomptesResponse calculerDecomptesPreCreation(DecomptesPreCreationRequest request) {
+    // Récupérer l'utilisateur et le mandat
+    User user = userRepo.findById(request.getUserId())
+            .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+    
+    // Récupérer les villes sélectionnées par leurs IDs
+    List<Ville> villesSelectionnees = villeRepo.findAllById(request.getVilleIds());
+    
+    // Vérifier s'il y a au moins une ville extérieure parmi les villes sélectionnées
+    boolean hasVilleExterieure = villesSelectionnees.stream()
+            .anyMatch(ville -> !ville.isInterieur());
+    
+    // Calculer selon le type de ville
+    Long tauxJournalier;
+    if (hasVilleExterieure) {
+        tauxJournalier = user.getRang().getFraisExterne().longValue();
+    } else {
+        tauxJournalier = user.getRang().getFraisInterne().longValue();
+    }
+    
+    Long decompteTotal = tauxJournalier * request.getDuree();
+    Long decompteAvance = Math.round((decompteTotal * request.getTauxAvance()) / 100.0);
+    Long decompteRelicat = decompteTotal - decompteAvance;
+    
+    return new DecomptesResponse(decompteTotal, decompteAvance, decompteRelicat);
+}
+
+public DecomptesResponse getOrdreMissionDecomptes(Long ordreMissionId, Long userId, Double tauxAvance) {
+        // Implémentation de l'ancienne méthode pour compatibilité
+        OrdreMission ordreMission = ordreMissionRepo.findById(ordreMissionId)
+                .orElseThrow(() -> new RuntimeException("Ordre de mission non trouvé"));
+        
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        
+        Long decompteTotal = calculateDecompteTotal(user, ordreMission);
+        Long decompteAvance = Math.round((decompteTotal * tauxAvance) / 100.0);
+        Long decompteRelicat = decompteTotal - decompteAvance;
+        
+        return new DecomptesResponse(decompteTotal, decompteAvance, decompteRelicat);
+    }
+
+private Long calculateFraisExterne(OrdreMission ordreMission, User user) {
+    // Exemple de calcul pour les frais externes
+    Long fraisExterne = user.getRang().getFraisExterne().longValue();
+    
+    // Utiliser la durée de l'ordre de mission
+    return fraisExterne * ordreMission.getDuree();
+}
+
+private Long calculateFraisInterne(OrdreMission ordreMission, User user) {
+    // Exemple de calcul pour les frais internes
+    Long fraisInterne = user.getRang().getFraisInterne().longValue();
+    
+    // Utiliser la durée de l'ordre de mission
+    return fraisInterne * ordreMission.getDuree();
+}
 
     private String validerUtilisateur(User user, Mandat mandat, Date dateDebutOrdreMission) {
         // Vérification 1 : Ordre de mission en cours
@@ -258,7 +352,7 @@ public class OrdreMissionService {
         
         if (dernierOrdreMission.isPresent()) {
             Date dateFinDernierOrdre = dernierOrdreMission.get().getDateFin();
-            Date dateDebutMandat = mandat.getDateDebut();
+            // Date dateDebutMandat = mandat.getDateDebut();
             
             // Convert to LocalDate for comparison
             LocalDate finDernierOrdre = dateFinDernierOrdre.toInstant()
@@ -286,18 +380,19 @@ public class OrdreMissionService {
     }
 
     /**
-     * Calcule les décomptes pour un utilisateur et un mandat (sans créer l'ordre de mission)
-     */
-    public Map<String, Long> calculerDecomptes(User user, Mandat mandat, Long tauxAvance) {
-        Long decompteTotal = calculateDecompteTotal(user, mandat);
-        Long decompteAvance = decompteTotal * tauxAvance / 100;
-        Long decompteRelicat = decompteTotal - decompteAvance;
-        return Map.of(
-            "decompteTotal", decompteTotal,
-            "decompteAvance", decompteAvance,
-            "decompteRelicat", decompteRelicat
-        );
-    }
+ * Calcule les décomptes pour un utilisateur et un ordre de mission (sans sauvegarder l'ordre de mission)
+ */
+public Map<String, Long> calculerDecomptes(User user, OrdreMission ordreMission, Long tauxAvance) {
+    Long decompteTotal = calculateDecompteTotal(user, ordreMission);
+    Long decompteAvance = decompteTotal * tauxAvance / 100;
+    Long decompteRelicat = decompteTotal - decompteAvance;
+    
+    return Map.of(
+        "decompteTotal", decompteTotal,
+        "decompteAvance", decompteAvance,
+        "decompteRelicat", decompteRelicat
+    );
+}
 
     /**
      * Générer et télécharger un PDF de l'ordre de mission
@@ -337,9 +432,9 @@ public class OrdreMissionService {
         refTable.setSpacingBefore(8);
         refTable.setSpacingAfter(10);
 
-        Mandat mandat = ordreMission.getMandat();
+        //Mandat mandat = ordreMission.getMandat();
         
-        PdfPCell refCell = new PdfPCell(new Phrase("N°" + mandat.getReference(), normalFont));
+        PdfPCell refCell = new PdfPCell(new Phrase("N°" + ""));
         refCell.setBorder(Rectangle.NO_BORDER);
         refCell.setHorizontalAlignment(Element.ALIGN_LEFT);
         
@@ -1025,11 +1120,6 @@ private void createDecomptesFinauxSection(Document document, Font normalFont, Fo
         String userEmail = authentication.getName();
         User user = userRepo.findByEmail(userEmail)
             .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
-        
-        // if (!user.getRole().equals(RoleEnum.DIRECTEUR_RESSOURCES_HUMAINES) && 
-        //     !user.getRole().equals(RoleEnum.ADMIN)) {
-        //     throw new IllegalArgumentException("Seul le directeur des ressources humaines peut confirmer un ordre de mission");
-        // }
 
         OrdreMission ordreMission = ordreMissionRepo.findById(ordreMissionId)
             .orElseThrow(() -> new EntityNotFoundException("Ordre de mission non trouvé"));
@@ -1044,11 +1134,56 @@ private void createDecomptesFinauxSection(Document document, Font normalFont, Fo
         ordreMission.setDateConfirmation(LocalDateTime.now());
         
         OrdreMission confirmedOrdreMission = ordreMissionRepo.save(ordreMission);
+
+        // Notifier l'utilisateur concerné
+        emailService.sendEmail(
+            ordreMission.getUser().getEmail(),
+            "Ordre de mission confirmé",
+            "Votre ordre de mission " + ordreMission.getReference() + " a été confirmé avec succès, par " + user.getName() + "."
+        );
+
         return mapToResponseDto(confirmedOrdreMission);
+    }
+
+    @Transactional
+    public OrdreMissionResponseDto rejetterOrdreMission(Long ordreMissionId, Authentication authentication) {
+        // Extraire l'utilisateur depuis le token JWT
+        String userEmail = authentication.getName();
+        User user = userRepo.findByEmail(userEmail)
+            .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
+
+        OrdreMission ordreMission = ordreMissionRepo.findById(ordreMissionId)
+            .orElseThrow(() -> new EntityNotFoundException("Ordre de mission non trouvé"));
+
+        if (ordreMission.getStatut() != OrdreMissionStatut.EN_ATTENTE_CONFIRMATION) {
+            throw new IllegalArgumentException("Cet ordre de mission ne peut pas être confirmé dans son état actuel");
+        }
+
+        // Rejeter l'ordre de mission
+        ordreMission.setStatut(OrdreMissionStatut.REJETE);
+        ordreMission.setRejeteParUserId(user.getId()); // Utiliser l'ID de l'utilisateur authentifié
+        ordreMission.setDateRejet(LocalDateTime.now());
+        
+        OrdreMission rejectedOrdreMission = ordreMissionRepo.save(ordreMission);
+
+        // Notifier l'utilisateur concerné
+        emailService.sendEmail(
+            ordreMission.getUser().getEmail(),
+            "Ordre de mission rejeté",
+            "Votre ordre de mission " + ordreMission.getReference() + " a été rejeté" + " par " + user.getName() + "."
+        );
+        return mapToResponseDto(rejectedOrdreMission);
     }
 
     public List<OrdreMissionResponseDto> getOrdresMissionEnAttenteConfirmation() {
         List<OrdreMission> ordresMission = ordreMissionRepo.findByStatut(OrdreMissionStatut.EN_ATTENTE_CONFIRMATION);
+        return ordresMission.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<OrdreMissionResponseDto> getOrdresMissionRejete() {
+        List<OrdreMission> ordresMission = ordreMissionRepo.findByStatut(OrdreMissionStatut.REJETE);
         return ordresMission.stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
@@ -1082,6 +1217,13 @@ private void createDecomptesFinauxSection(Document document, Font normalFont, Fo
         for (OrdreMission ordre : ordresADemarrer) {
             ordre.setStatut(OrdreMissionStatut.EN_COURS);
             ordreMissionRepo.save(ordre);
+
+            // Notifier l'utilisateur concerné
+            emailService.sendEmail(
+                ordre.getUser().getEmail(),
+                "Ordre de mission en cours",
+                "Votre ordre de mission " + ordre.getReference() + " a été mis en cours d'exécution."
+            );
         }
         
         // Mettre à jour les ordres EN_COURS vers ACHEVE
@@ -1091,6 +1233,13 @@ private void createDecomptesFinauxSection(Document document, Font normalFont, Fo
         for (OrdreMission ordre : ordresATerminer) {
             ordre.setStatut(OrdreMissionStatut.ACHEVE);
             ordreMissionRepo.save(ordre);
+
+            // Notifier l'utilisateur concerné
+            emailService.sendEmail(
+                ordre.getUser().getEmail(),
+                "Ordre de mission achevé",
+                "Votre ordre de mission " + ordre.getReference() + " a été marqué comme achevé."
+            );
         }
     }
 
@@ -1109,6 +1258,42 @@ private void createDecomptesFinauxSection(Document document, Font normalFont, Fo
     }
 
     private OrdreMissionResponseDto mapToResponseDto(OrdreMission ordreMission) {
+        // Convertir les pièces jointes
+        List<PieceJointeResponseDto> pieceJointeDtos = ordreMission.getPiecesJointes() != null ? 
+            ordreMission.getPiecesJointes().stream()
+                .map(this::convertirEnResponseDto)
+                .collect(Collectors.toList()) : 
+            List.of();
+        // Convertir le user
+        UserResponseDto userDto = ordreMission.getUser() != null ? 
+        new UserResponseDto(
+            ordreMission.getUser().getId(), 
+            ordreMission.getUser().getName(), 
+            ordreMission.getUser().getEmail(),
+            ordreMission.getUser().getMatricule(),
+            ordreMission.getUser().getQuotaAnnuel(),
+            new RoleResponseDto(
+                ordreMission.getUser().getRole().getId(),
+                ordreMission.getUser().getRole().getName(),
+                ordreMission.getUser().getRole().getDescription(),
+                ordreMission.getUser().getRole().getCreated_at(),
+                ordreMission.getUser().getRole().getUpdated_at()
+            ),
+            new RangResponseDto(
+                ordreMission.getUser().getRang().getId(),
+                ordreMission.getUser().getRang().getNom(),
+                ordreMission.getUser().getRang().getCode(),
+                ordreMission.getUser().getRang().getFraisExterne(),
+                ordreMission.getUser().getRang().getFraisInterne(),
+                ordreMission.getUser().getRang().getCreated_at(),
+                ordreMission.getUser().getRang().getUpdated_at()
+            ),
+            ordreMission.getUser().getFonction(),
+            ordreMission.getUser().getCreated_at(),
+            ordreMission.getUser().getUpdated_at()
+        ) : 
+        null;
+
         return new OrdreMissionResponseDto(
                 ordreMission.getId(),
                 ordreMission.getReference(),
@@ -1125,8 +1310,50 @@ private void createDecomptesFinauxSection(Document document, Font normalFont, Fo
                 ordreMission.getStatut(),
                 ordreMission.getCreated_at(),
                 ordreMission.getUpdated_at(),
-                ordreMission.getDateConfirmation()
+                ordreMission.getDateConfirmation(),
+                ordreMission.getDateRejet(),
+                pieceJointeDtos,
+                userDto
 
         );
+    }
+
+    // Méthode utilitaire pour convertir en DTO de réponse
+    private PieceJointeResponseDto convertirEnResponseDto(PieceJointe pieceJointe) {
+        PieceJointeResponseDto dto = new PieceJointeResponseDto();
+        dto.setId(pieceJointe.getId());
+        dto.setNom(pieceJointe.getNom());
+        dto.setNomOriginal(pieceJointe.getNomOriginal());
+        dto.setCheminFichier(pieceJointe.getCheminFichier());
+        dto.setTypeMime(pieceJointe.getTypeMime());
+        dto.setTaille(pieceJointe.getTaille());
+        dto.setDescription(pieceJointe.getDescription());
+        dto.setCreated_at(pieceJointe.getCreated_at());
+        dto.setUpdated_at(pieceJointe.getUpdated_at());
+        dto.setActif(pieceJointe.isActif());
+
+        // Relations
+        if (pieceJointe.getUser() != null) {
+            dto.setUserId(pieceJointe.getUser().getId());
+            // Se rassurer que la classe User a une méthode getName()
+            dto.setUserName(pieceJointe.getUser().getName());
+        }
+
+        if (pieceJointe.getMandat() != null) {
+            dto.setMandatId(pieceJointe.getMandat().getId());
+            dto.setMandatReference(pieceJointe.getMandat().getReference());
+        }
+
+        if (pieceJointe.getOrdreMission() != null) {
+            dto.setOrdreMissionId(pieceJointe.getOrdreMission().getId());
+            dto.setOrdreMissionReference(pieceJointe.getOrdreMission().getReference());
+        }
+
+        if (pieceJointe.getRapport() != null) {
+            dto.setRapportId(pieceJointe.getRapport().getId());
+            dto.setRapportReference(pieceJointe.getRapport().getReference());
+        }
+
+        return dto;
     }
 }

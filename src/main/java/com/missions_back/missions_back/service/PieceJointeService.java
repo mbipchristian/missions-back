@@ -2,7 +2,10 @@ package com.missions_back.missions_back.service;
 
 // Imports nécessaires à ajouter
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,17 +13,17 @@ import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.missions_back.missions_back.dto.PieceJointeDto;
 import com.missions_back.missions_back.dto.PieceJointeResponseDto;
 import com.missions_back.missions_back.model.Mandat;
+import com.missions_back.missions_back.model.MandatStatut;
 import com.missions_back.missions_back.model.OrdreMission;
 import com.missions_back.missions_back.model.OrdreMissionStatut;
 import com.missions_back.missions_back.model.PieceJointe;
@@ -31,6 +34,11 @@ import com.missions_back.missions_back.repository.OrdreMissionRepo;
 import com.missions_back.missions_back.repository.PieceJointeRepository;
 import com.missions_back.missions_back.repository.RapportRepo;
 import com.missions_back.missions_back.repository.UserRepo;
+
+import jakarta.persistence.EntityNotFoundException;
+
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 
 @Service
 @Transactional
@@ -49,9 +57,9 @@ public class PieceJointeService {
     private OrdreMissionRepo ordreMissionRepository;
 
     @Autowired
-    private RapportRepo rapportRepository;
+    private EmailService emailService;
 
-    public PieceJointeResponseDto uploadPieceJointe(MultipartFile file, Long userId, 
+public PieceJointeResponseDto uploadPieceJointe(MultipartFile file, Long userId, 
         Long mandatId, Long ordreMissionId, Long rapportId, String description) throws IOException {
     
     // Vérifier que le fichier n'est pas vide
@@ -92,8 +100,25 @@ public class PieceJointeService {
     // Associer aux entités si les IDs sont fournis
     if (mandatId != null) {
         Mandat mandat = mandatRepository.findById(mandatId)
-                .orElseThrow(() -> new RuntimeException("Mandat non trouvé"));
+        .orElseThrow(() -> new RuntimeException("Mandat non trouvé"));
         pieceJointe.setMandat(mandat);
+
+        // Si le mandat est "ACHEVE", le passer à "ACHEVE_AVEC_RAPPORT"
+        if (MandatStatut.ACHEVE.equals(mandat.getStatut())) {
+            mandat.setStatut(MandatStatut.ACHEVE_AVEC_RAPPORT);
+            mandat.setUpdated_at(LocalDateTime.now());
+            mandatRepository.save(mandat);
+
+            // Notifier les utilisateurs du mandat
+    //         if (mandat.getUsers() != null && !mandat.getUsers().isEmpty()) {
+    //         emailService.sendEmail(
+    //             mandat.getUsers().stream().map(User::getEmail).toList(),
+    //             "Mandat confirmé",
+    //             "Votre mandat " + mandat.getReference() + " a été mis au statut ACHEVE AVEC RAPPORT"
+    //         );
+    // }
+        }
+        // Si le statut est "EN_ATTENTE_CONFIRMATION", aucune modification nécessaire
     }
     
     if (ordreMissionId != null) {
@@ -106,64 +131,65 @@ public class PieceJointeService {
         ordreMissionRepository.save(ordreMission);
     }
     
-    if (rapportId != null) {
-        Rapport rapport = rapportRepository.findById(rapportId)
-                .orElseThrow(() -> new RuntimeException("Rapport non trouvé"));
-        pieceJointe.setRapport(rapport);
-    }
-    
     PieceJointe pieceJointeSauvegardee = pieceJointeRepository.save(pieceJointe);
     return convertirEnResponseDto(pieceJointeSauvegardee);
 }
 
-    // Obtenir toutes les pièces jointes
-    public List<PieceJointeResponseDto> obtenirToutesPiecesJointes() {
-        return pieceJointeRepository.findByActifTrue()
-                .stream()
-                .map(this::convertirEnResponseDto)
-                .collect(Collectors.toList());
-    }
+// Ajouter cette méthode dans la classe PieceJointeService
 
-    // Obtenir une pièce jointe par ID
-    public Optional<PieceJointeResponseDto> obtenirPieceJointeParId(Long id) {
-        return pieceJointeRepository.findById(id)
-                .filter(pj -> pj.isActif())
-                .map(this::convertirEnResponseDto);
+/**
+ * Télécharger une pièce jointe par son ID
+ * @param id L'identifiant de la pièce jointe
+ * @return Resource contenant le fichier
+ * @throws IOException En cas d'erreur de lecture du fichier
+ */
+public Resource telechargerPieceJointe(Long id) throws IOException {
+    // Récupérer la pièce jointe depuis la base de données
+    PieceJointe pieceJointe = pieceJointeRepository.findById(id)
+            .filter(pj -> pj.isActif())
+            .orElseThrow(() -> new EntityNotFoundException("Pièce jointe non trouvée avec l'ID : " + id));
+    
+    // Construire le chemin vers le fichier
+    Path cheminFichier = Paths.get(pieceJointe.getCheminFichier());
+    
+    // Vérifier que le fichier existe physiquement
+    if (!Files.exists(cheminFichier)) {
+        throw new FileNotFoundException("Le fichier physique n'existe pas : " + pieceJointe.getCheminFichier());
     }
-
-    // Obtenir les pièces jointes par mandat
-    public List<PieceJointeResponseDto> obtenirPiecesJointesParMandat(Long mandatId) {
-        return pieceJointeRepository.findByMandatIdAndActifTrue(mandatId)
-                .stream()
-                .map(this::convertirEnResponseDto)
-                .collect(Collectors.toList());
+    
+    // Vérifier que le fichier est lisible
+    if (!Files.isReadable(cheminFichier)) {
+        throw new IOException("Le fichier n'est pas lisible : " + pieceJointe.getCheminFichier());
     }
-
-    // Obtenir les pièces jointes par ordre de mission
-    public List<PieceJointeResponseDto> obtenirPiecesJointesParOrdreMission(Long ordreMissionId) {
-        return pieceJointeRepository.findByOrdreMissionIdAndActifTrue(ordreMissionId)
-                .stream()
-                .map(this::convertirEnResponseDto)
-                .collect(Collectors.toList());
+    
+    try {
+        // Créer une ressource à partir du fichier - Utiliser FileSystemResource au lieu de UrlResource
+        Resource resource = new FileSystemResource(cheminFichier);
+        
+        if (resource.exists() && resource.isReadable()) {
+            return resource;
+        } else {
+            throw new IOException("Impossible de lire le fichier : " + pieceJointe.getNomOriginal());
+        }
+    } catch (Exception e) {
+        throw new IOException("Erreur lors de la création de la ressource fichier", e);
     }
+}
 
-    // Obtenir les pièces jointes par rapport
-    public List<PieceJointeResponseDto> obtenirPiecesJointesParRapport(Long rapportId) {
-        return pieceJointeRepository.findByRapportIdAndActifTrue(rapportId)
-                .stream()
-                .map(this::convertirEnResponseDto)
-                .collect(Collectors.toList());
-    }
+/**
+ * Obtenir les informations d'une pièce jointe pour le téléchargement
+ * @param id L'identifiant de la pièce jointe
+ * @return PieceJointeResponseDto contenant les informations
+ */
+public PieceJointeResponseDto obtenirInfosPieceJointe(Long id) {
+    PieceJointe pieceJointe = pieceJointeRepository.findById(id)
+            .filter(pj -> pj.isActif())
+            .orElseThrow(() -> new RuntimeException("Pièce jointe non trouvée"));
+    
+    return convertirEnResponseDto(pieceJointe);
+}
 
-    // Obtenir les pièces jointes par utilisateur
-    public List<PieceJointeResponseDto> obtenirPiecesJointesParUtilisateur(Long userId) {
-        return pieceJointeRepository.findByUserIdAndActifTrue(userId)
-                .stream()
-                .map(this::convertirEnResponseDto)
-                .collect(Collectors.toList());
-    }
-
-    // Mettre à jour une pièce jointe
+    
     public PieceJointeResponseDto mettreAJourPieceJointe(Long id, PieceJointeDto pieceJointeDto) {
         PieceJointe pieceJointe = pieceJointeRepository.findById(id)
                 .filter(pj -> pj.isActif())
@@ -188,26 +214,6 @@ public class PieceJointeService {
         pieceJointeRepository.save(pieceJointe);
     }
 
-    // Rechercher par nom
-    public List<PieceJointeResponseDto> rechercherParNom(String nom) {
-        return pieceJointeRepository.findByNomContainingIgnoreCaseAndActifTrue(nom)
-                .stream()
-                .map(this::convertirEnResponseDto)
-                .collect(Collectors.toList());
-    }
-
-    // Obtenir les statistiques
-    public long compterPiecesJointesParMandat(Long mandatId) {
-        return pieceJointeRepository.countByMandatIdAndActifTrue(mandatId);
-    }
-
-    public long compterPiecesJointesParOrdreMission(Long ordreMissionId) {
-        return pieceJointeRepository.countByOrdreMissionIdAndActifTrue(ordreMissionId);
-    }
-
-    public long compterPiecesJointesParRapport(Long rapportId) {
-        return pieceJointeRepository.countByRapportIdAndActifTrue(rapportId);
-    }
 
     // Méthode utilitaire pour convertir en DTO de réponse
     private PieceJointeResponseDto convertirEnResponseDto(PieceJointe pieceJointe) {

@@ -2,6 +2,7 @@ package com.missions_back.missions_back.dto;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 import com.missions_back.missions_back.model.OrdreMissionStatut;
 
@@ -21,7 +22,10 @@ public record OrdreMissionResponseDto(
     OrdreMissionStatut statut,
     LocalDateTime created_at,
     LocalDateTime updated_at,
-    LocalDateTime confirmele
+    LocalDateTime confirmele,
+    LocalDateTime rejetele,
+    List <PieceJointeResponseDto> piecesJointes,
+    UserResponseDto user
 ) {
     
 }

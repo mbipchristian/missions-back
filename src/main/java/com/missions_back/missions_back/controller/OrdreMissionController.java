@@ -2,6 +2,7 @@ package com.missions_back.missions_back.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,15 +15,21 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.missions_back.missions_back.dto.DecomptesPreCreationRequest;
+import com.missions_back.missions_back.dto.DecomptesResponse;
 import com.missions_back.missions_back.dto.OrdreMissionDto;
 import com.missions_back.missions_back.dto.OrdreMissionResponseDto;
 import com.missions_back.missions_back.dto.OrdreMissionUpdateDto;
 import com.missions_back.missions_back.model.User;
+import com.missions_back.missions_back.model.Ville;
 import com.missions_back.missions_back.model.Mandat;
+import com.missions_back.missions_back.model.OrdreMission;
 import com.missions_back.missions_back.repository.UserRepo;
 import com.missions_back.missions_back.repository.MandatRepo;
+import com.missions_back.missions_back.repository.OrdreMissionRepo;
 import com.missions_back.missions_back.service.OrdreMissionService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,9 +43,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 public class OrdreMissionController {
 
     private final OrdreMissionService ordreMissionService;
+    private final OrdreMissionRepo ordreMissionRepo;
     
-    public OrdreMissionController(OrdreMissionService ordreMissionService) {
+    public OrdreMissionController(OrdreMissionService ordreMissionService, OrdreMissionRepo ordreMissionRepo) {
         this.ordreMissionService = ordreMissionService;
+        this.ordreMissionRepo = ordreMissionRepo;
     }
     @Autowired
     private UserRepo userRepo;
@@ -129,35 +138,49 @@ public class OrdreMissionController {
                     .body(new ErrorResponse(e.getMessage()));
         }
     }
+
+    @PostMapping("/{id}/rejetter")
+    public ResponseEntity<?> rejetterOrdreMission(@PathVariable Long id, Authentication authentication) {
+        try {
+            OrdreMissionResponseDto ordre = ordreMissionService.rejetterOrdreMission(id, authentication);
+            return ResponseEntity.ok(ordre);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
     /**
      * Mettre à jour un ordre de mission
      */
-    @PutMapping("/{id}/update")
-    @Operation(summary = "Mettre à jour un ordre de mission")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Ordre de mission mis à jour avec succès"),
-        @ApiResponse(responseCode = "404", description = "Ordre de mission non trouvé"),
-        @ApiResponse(responseCode = "400", description = "Données de mise à jour invalides"),
-        @ApiResponse(responseCode = "403", description = "Autorisation insuffisante")
-    })
-    public ResponseEntity<?> updateOrdreMission(
-            @Parameter(description = "ID de l'ordre de mission") @PathVariable Long id,
-            @RequestBody OrdreMissionUpdateDto updateDto,
-            Authentication authentication) {
-        try {
-            OrdreMissionResponseDto updatedOrdre = ordreMissionService.updateOrdreMission(id, updateDto, authentication);
-            return ResponseEntity.ok(updatedOrdre);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Ordre de mission non trouvé", "message", e.getMessage()));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Autorisation refusée", "message", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur interne", "message", "Une erreur est survenue lors de la mise à jour"));
-        }
-    }
+    // @PutMapping("/{id}/update")
+    // @Operation(summary = "Mettre à jour un ordre de mission")
+    // @ApiResponses(value = {
+    //     @ApiResponse(responseCode = "200", description = "Ordre de mission mis à jour avec succès"),
+    //     @ApiResponse(responseCode = "404", description = "Ordre de mission non trouvé"),
+    //     @ApiResponse(responseCode = "400", description = "Données de mise à jour invalides"),
+    //     @ApiResponse(responseCode = "403", description = "Autorisation insuffisante")
+    // })
+    // public ResponseEntity<?> updateOrdreMission(
+    //         @Parameter(description = "ID de l'ordre de mission") @PathVariable Long id,
+    //         @RequestBody OrdreMissionUpdateDto updateDto,
+    //         Authentication authentication) {
+    //     try {
+    //         OrdreMissionResponseDto updatedOrdre = ordreMissionService.updateOrdreMission(id, updateDto, authentication);
+    //         return ResponseEntity.ok(updatedOrdre);
+    //     } catch (EntityNotFoundException e) {
+    //         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+    //                 .body(Map.of("error", "Ordre de mission non trouvé", "message", e.getMessage()));
+    //     } catch (IllegalArgumentException e) {
+    //         return ResponseEntity.status(HttpStatus.FORBIDDEN)
+    //                 .body(Map.of("error", "Autorisation refusée", "message", e.getMessage()));
+    //     } catch (Exception e) {
+    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+    //                 .body(Map.of("error", "Erreur interne", "message", "Une erreur est survenue lors de la mise à jour"));
+    //     }
+    // }
 
     /**
      * Télécharger le PDF d'un ordre de mission
@@ -190,6 +213,16 @@ public class OrdreMissionController {
     public ResponseEntity<List<OrdreMissionResponseDto>> getOrdresEnAttenteConfirmation() {
         try {
             List<OrdreMissionResponseDto> ordres = ordreMissionService.getOrdresMissionEnAttenteConfirmation();
+            return ResponseEntity.ok(ordres);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/rejetes")
+    public ResponseEntity<List<OrdreMissionResponseDto>> getOrdresRejetes() {
+        try {
+            List<OrdreMissionResponseDto> ordres = ordreMissionService.getOrdresMissionRejete();
             return ResponseEntity.ok(ordres);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -257,6 +290,32 @@ public class OrdreMissionController {
         }
     }
 
+    @PostMapping("/calcul-decomptes-pre-creation")
+    public ResponseEntity<DecomptesResponse> calculerDecomptesPreCreation(
+            @RequestBody DecomptesPreCreationRequest request) {
+        try {
+            DecomptesResponse response = ordreMissionService.calculerDecomptesPreCreation(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // Ancienne méthode pour compatibilité
+    @GetMapping("/calcul-decomptes")
+    public ResponseEntity<DecomptesResponse> getOrdreMissionDecomptes(
+            @RequestParam Long ordreMissionId,
+            @RequestParam Long userId,
+            @RequestParam Double tauxAvance) {
+        try {
+            DecomptesResponse response = ordreMissionService.getOrdreMissionDecomptes(
+                ordreMissionId, userId, tauxAvance);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<OrdreMissionResponseDto> getOrdreMissionById(@PathVariable Long id) {
         try {
@@ -313,22 +372,7 @@ public ResponseEntity<?> creerOrdreMission(@RequestBody OrdreMissionDto dto, Aut
     }
 }
 
-    @GetMapping("/calcul-decomptes")
-    public ResponseEntity<?> calculerDecomptes(Long mandatId, Long userId, Long tauxAvance) {
-        try {
-            var mandat = mandatRepo.findById(mandatId)
-                .orElseThrow(() -> new EntityNotFoundException("Mandat non trouvé"));
-            var user = userRepo.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
-            var result = ordreMissionService.calculerDecomptes(user, mandat, tauxAvance);
-            return ResponseEntity.ok(result);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Erreur lors du calcul des décomptes"));
-        }
-    }
-
+   
     private Long getUserIdFromAuthentication(Authentication authentication) {
         if (authentication == null) {
             throw new RuntimeException("Aucune authentification trouvée");

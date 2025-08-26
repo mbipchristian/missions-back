@@ -26,6 +26,7 @@ public record MandatResponseDto(
     LocalDateTime confirmele,
     Integer usersCount,
     Integer villesCount,
-    Integer ressourcesCount
+    Integer ressourcesCount,
+    List<PieceJointeResponseDto> piecesJointes
     
 ) {}

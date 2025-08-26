@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.missions_back.missions_back.dto.LoginUserDto;
+import com.missions_back.missions_back.dto.RangResponseDto;
 import com.missions_back.missions_back.dto.RegisterUserDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
 import com.missions_back.missions_back.dto.UserResponseDto;
@@ -150,13 +151,20 @@ public class UserService {
         if (user.getRole() != null) { // Correction: suppression de la condition redondante
             roleDto = convertToRoleResponseDto(user.getRole());
         }
+
+        RangResponseDto rangDto = null;
+        if (user.getRang() != null) { // Correction: suppression de la condition redondante
+            rangDto = convertToRangResponseDto(user.getRang());
+        }
+        
         return new UserResponseDto(
             user.getId(),
-            user.getUsername(), // Correction: getUsername au lieu de getName
+            user.getName(), 
             user.getEmail(),
             user.getMatricule(),
             user.getQuotaAnnuel(),
             roleDto,  
+            rangDto,
             user.getFonction(),
             user.getCreated_at(), // Correction: getCreated_at au lieu de getCreatedAt
             user.getUpdated_at()  // Correction: getUpdated_at au lieu de getUpdatedAt
@@ -171,5 +179,15 @@ public class UserService {
             role.getCreated_at(),
             role.getUpdated_at()
         );
+    }
+    private RangResponseDto convertToRangResponseDto(Rang rang) {
+        return new RangResponseDto(
+            rang.getId(),
+            rang.getNom(),
+            rang.getCode(),
+            rang.getFraisExterne(),
+            rang.getFraisInterne(),
+            rang.getCreated_at(),
+            rang.getUpdated_at()        );
     }
 }

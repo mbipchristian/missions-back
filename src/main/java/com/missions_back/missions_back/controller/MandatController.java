@@ -75,6 +75,17 @@ public class MandatController {
         }
     }
 
+    @GetMapping("/achevesAvecRapport")
+    public ResponseEntity<?> getMandatsAchevesAvecRapport() {
+        try {
+            List<MandatResponseDto> mandats = mandatService.getMandatsAchevesAvecRapport();
+            return ResponseEntity.ok(mandats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Erreur lors de la récupération des mandats achevés avec rapport"));
+        }
+    }
+
     @PostMapping("/create")
     public ResponseEntity<?> createMandat(@RequestBody MandatDto mandatDto, Authentication authentication) {
         try {

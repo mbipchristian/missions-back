@@ -5,6 +5,7 @@ public enum OrdreMissionStatut {
     EN_ATTENTE_CONFIRMATION("En attente de confirmation"),
     EN_ATTENTE_EXECUTION("En attente d'exécution"),
     EN_COURS("En cours"),
+    REJETE("Rejeté"),
     ACHEVE("Achevé");
 
     private final String libelle;

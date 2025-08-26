@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.missions_back.missions_back.dto.EtapeDto;
 import com.missions_back.missions_back.dto.EtapeResponseDto;
+import com.missions_back.missions_back.dto.RangResponseDto;
 import com.missions_back.missions_back.dto.RessourceResponseDto;
 import com.missions_back.missions_back.dto.RoleResponseDto;
 import com.missions_back.missions_back.dto.UserResponseDto;
@@ -210,7 +211,7 @@ public class EtapeService {
             etape.getRessources().stream()
                 .map(this::convertToRessourceResponseDto)
                 .collect(Collectors.toList()) : 
-            List.of();
+            List.of();   
 
         return new EtapeResponseDto(
             etape.getId(),
@@ -236,16 +237,26 @@ public class EtapeService {
                 user.getRole().getCreated_at(),
                 user.getRole().getUpdated_at()
             ) : null;
+        RangResponseDto rangDto = user.getRang() != null ?
+            new RangResponseDto(
+                user.getRang().getId(),
+                user.getRang().getNom(),
+                user.getRang().getCode(),
+                user.getRang().getFraisExterne(),
+                user.getRang().getFraisInterne(),
+                user.getRang().getCreated_at(),
+                user.getRang().getUpdated_at()            ) : null;
 
         
 
         return new UserResponseDto(
             user.getId(),
-            user.getUsername(),
+            user.getName(),
             user.getEmail(),
             user.getMatricule(),
             user.getQuotaAnnuel(),
             roleDto,
+            rangDto,
             user.getFonction(),
             user.getCreated_at(),
             user.getUpdated_at()

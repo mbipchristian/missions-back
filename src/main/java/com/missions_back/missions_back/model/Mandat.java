@@ -75,6 +75,9 @@ public class Mandat {
     @OneToMany(mappedBy = "mandat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrdreMission> ordresMission;
 
+        @OneToMany(mappedBy = "mandat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+        private List<PieceJointe> piecesJointes;
+
     @ManyToMany()
     @JoinTable(name = "user_mandat",
             joinColumns = @JoinColumn(name = "mandat_id"),

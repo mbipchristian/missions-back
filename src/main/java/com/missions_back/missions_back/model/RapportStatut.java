@@ -1,15 +1,13 @@
 package com.missions_back.missions_back.model;
 
-public enum MandatStatut {
+public enum RapportStatut {
     EN_ATTENTE_CONFIRMATION("En attente de confirmation"),
-    EN_ATTENTE_EXECUTION("En attente d'exécution"), 
-    EN_COURS("En cours"),
-    ACHEVE("Achevé"),
-    ACHEVE_AVEC_RAPPORT("Achevé avec rapport");
+    CONFIRME("Confirmé"),
+    REJETE("Rejeté");
 
     private final String libelle;
 
-    MandatStatut(String libelle) {
+    RapportStatut(String libelle) {
         this.libelle = libelle;
     }
 
